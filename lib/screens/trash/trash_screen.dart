@@ -1,0 +1,121 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/utils/currency_formatter.dart';
+import '../../data/models/expense.dart';
+import '../../providers/category_provider.dart';
+import '../../providers/expense_provider.dart';
+
+class TrashScreen extends ConsumerStatefulWidget {
+  const TrashScreen({super.key});
+
+  @override
+  ConsumerState<TrashScreen> createState() => _TrashScreenState();
+}
+
+class _TrashScreenState extends ConsumerState<TrashScreen> {
+  late Future<List<Expense>> _deletedExpenses;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    _deletedExpenses = ref.read(expenseProvider.notifier).getDeletedExpenses();
+  }
+
+  Future<void> _restore(Expense expense) async {
+    await ref.read(expenseProvider.notifier).restoreExpense(expense.id!);
+    setState(_reload);
+  }
+
+  Future<void> _deleteForever(Expense expense) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xóa vĩnh viễn?'),
+        content: const Text('Khoản chi và ảnh đính kèm sẽ không thể khôi phục.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Xóa vĩnh viễn'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await ref.read(expenseProvider.notifier).permanentlyDeleteExpense(expense);
+    if (mounted) setState(_reload);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryMap = {
+      for (final category in ref.watch(categoryProvider).categories) category.id: category,
+    };
+    return Scaffold(
+      appBar: AppBar(title: const Text('Thùng rác')),
+      body: FutureBuilder<List<Expense>>(
+        future: _deletedExpenses,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final expenses = snapshot.data ?? const <Expense>[];
+          if (expenses.isEmpty) {
+            return const Center(child: Text('Thùng rác đang trống.'));
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: expenses.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final expense = expenses[index];
+              final category = categoryMap[expense.categoryId];
+              return Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(10),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: 56,
+                      width: 56,
+                      child: expense.imagePath != null && File(expense.imagePath!).existsSync()
+                          ? Image.file(File(expense.imagePath!), fit: BoxFit.cover)
+                          : const ColoredBox(child: Icon(Icons.broken_image_outlined)),
+                    ),
+                  ),
+                  title: Text(expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption),
+                  subtitle: Text('${category?.icon ?? '🏷️'} ${category?.name ?? 'Khác'}'),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(CurrencyFormatter.format(expense.amount)),
+                      const SizedBox(height: 4),
+                      PopupMenuButton<String>(
+                        tooltip: 'Thao tác',
+                        onSelected: (value) {
+                          if (value == 'restore') _restore(expense);
+                          if (value == 'delete') _deleteForever(expense);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'restore', child: Text('Khôi phục')),
+                          PopupMenuItem(value: 'delete', child: Text('Xóa vĩnh viễn')),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
