@@ -52,7 +52,12 @@ class StatisticsNotifier extends StateNotifier<StatisticsState> {
       _categoryRepository = CategoryRepository(),
       super(StatisticsState());
 
+  DateTime? _lastFrom;
+  DateTime? _lastTo;
+
   Future<void> loadStatistics(DateTime from, DateTime to) async {
+    _lastFrom = from;
+    _lastTo = to;
     state = state.copyWith(isLoading: true);
     try {
       final expenses = await _expenseRepository.getExpenses(from: from, to: to);
@@ -87,6 +92,13 @@ class StatisticsNotifier extends StateNotifier<StatisticsState> {
     } catch (e) {
       state = state.copyWith(isLoading: false);
     }
+  }
+
+  Future<void> refreshStatistics() async {
+    final now = DateTime.now();
+    final from = _lastFrom ?? DateTime(now.year, now.month, 1);
+    final to = _lastTo ?? DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    await loadStatistics(from, to);
   }
 
   Future<void> generateInsights(DateTime from, DateTime to) async {

@@ -87,7 +87,10 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
                       width: 56,
                       child: expense.imagePath != null && File(expense.imagePath!).existsSync()
                           ? Image.file(File(expense.imagePath!), fit: BoxFit.cover)
-                          : const ColoredBox(child: Icon(Icons.broken_image_outlined)),
+                          : const ColoredBox(
+                              color: Colors.black12,
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
                     ),
                   ),
                   title: Text(expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption),

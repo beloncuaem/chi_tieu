@@ -57,29 +57,65 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     super.dispose();
   }
 
-  void _saveBudget() {
-    if (_isTotalBudget) {
-      final total =
-          double.tryParse(_totalBudgetController.text.replaceAll(',', '')) ??
-          0.0;
-      ref.read(budgetProvider.notifier).setTotalBudget(total);
-    } else {
-      final Map<int, double> catBudgets = {};
-      _categoryControllers.forEach((id, controller) {
-        final val = double.tryParse(controller.text.replaceAll(',', ''));
-        if (val != null && val > 0) {
-          catBudgets[id] = val;
-        }
-      });
-      ref.read(budgetProvider.notifier).setCategoryBudgets(catBudgets);
-    }
+  Future<void> _saveBudget() async {
+    final currentMonth = ref.read(budgetProvider).month;
+    try {
+      if (_isTotalBudget) {
+        final total =
+            double.tryParse(_totalBudgetController.text.replaceAll(',', '')) ??
+            0.0;
+        await ref.read(budgetProvider.notifier).setTotalBudget(
+          month: currentMonth,
+          amount: total,
+        );
+      } else {
+        final Map<int, double> catBudgets = {};
+        _categoryControllers.forEach((id, controller) {
+          final val = double.tryParse(controller.text.replaceAll(',', ''));
+          if (val != null && val > 0) {
+            catBudgets[id] = val;
+          }
+        });
+        await ref.read(budgetProvider.notifier).setCategoryBudgets(
+          month: currentMonth,
+          categoryBudgets: catBudgets,
+        );
+      }
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Đã lưu ngân sách!')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Đã lưu ngân sách!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        final message =
+            e is BudgetValidationException ? e.message : 'Lỗi khi lưu ngân sách';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<BudgetState>(budgetProvider, (previous, next) {
+      if (previous?.isLoading == true && !next.isLoading) {
+        if (next.totalBudget != null && next.totalBudget!.amount > 0) {
+          if (_totalBudgetController.text.isEmpty) {
+            _totalBudgetController.text =
+                next.totalBudget!.amount.toInt().toString();
+          }
+        }
+        for (var entry in next.categoryBudgets.entries) {
+          final controller = _categoryControllers[entry.key];
+          if (controller != null && controller.text.isEmpty && entry.value > 0) {
+            controller.text = entry.value.toInt().toString();
+          }
+        }
+      }
+    });
+
     final budgetState = ref.watch(budgetProvider);
     final categoryState = ref.watch(categoryProvider);
     final currentMonth = DateFormat('MM/yyyy').format(DateTime.now());

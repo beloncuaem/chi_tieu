@@ -2,18 +2,24 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../data/models/category.dart';
 import '../../data/models/expense.dart';
 import '../../data/models/priority_level.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../providers/priority_provider.dart';
+import '../../widgets/category_icon_badge.dart';
+import '../../widgets/priority_badge.dart';
 import '../camera/expense_form_sheet.dart';
 import '../settings/settings_screen.dart';
+import '../trash/trash_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -88,11 +94,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: AspectRatio(
             aspectRatio: 1,
-            child: Image.file(File(imagePath), fit: BoxFit.cover),
+            child: imagePath.startsWith('http')
+                ? CachedNetworkImage(imageUrl: imagePath, fit: BoxFit.contain)
+                : Image.file(File(imagePath), fit: BoxFit.contain),
           ),
         ),
       ),
@@ -115,11 +124,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categories = ref.watch(categoryProvider).categories;
     final priorities = ref.watch(priorityProvider).levels;
     final budgetState = ref.watch(budgetProvider);
+    final authState = ref.watch(authProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final userEmail = authState.user?.email;
+    final displayName = authState.user?.userMetadata?['full_name'] as String? ??
+        (userEmail != null ? userEmail.split('@').first : 'Bạn');
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tổng quan'),
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  displayName.isNotEmpty ? displayName[0].toUpperCase() : 'C',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Xin chào, $displayName',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: authState.user != null
+                            ? AppColors.primary
+                            : Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      authState.user != null ? 'Cloud Sync' : 'Offline Mode',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
+          IconButton(
+            tooltip: 'Thùng rác',
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TrashScreen()),
+              );
+              _refresh();
+            },
+          ),
           IconButton(
             tooltip: 'Cài đặt',
             icon: const Icon(Icons.settings_outlined),
@@ -133,16 +220,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           children: [
+            // Neo-Bank Balance & Summary Card
             _SummaryCards(
               today: expenseState.todayTotal,
               week: expenseState.weekTotal,
               month: expenseState.monthTotal,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Budget Progress Card
             _BudgetProgressCard(budgetState: budgetState),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
+
+            // Search & Filter Bar
             Row(
               children: [
                 Expanded(
@@ -152,32 +244,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onSubmitted: (_) => _applySearch(),
                     decoration: InputDecoration(
                       hintText: 'Tìm ghi chú, danh mục...',
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                      ),
                       suffixIcon: IconButton(
                         tooltip: 'Tìm kiếm',
-                        icon: const Icon(Icons.arrow_forward),
+                        icon: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                        ),
                         onPressed: _applySearch,
                       ),
-                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 IconButton.filledTonal(
                   tooltip: 'Lọc giao dịch',
                   onPressed: _showFilters,
+                  style: IconButton.styleFrom(
+                    padding: const EdgeInsets.all(12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   icon: Badge(
                     isLabelVisible: _filter.isActive,
                     label: const Text(''),
-                    child: const Icon(Icons.tune),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      size: 22,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            Text(
-              _filter.isActive ? 'Kết quả lọc' : 'Giao dịch gần đây',
-              style: Theme.of(context).textTheme.titleLarge,
+
+            // Header Section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _filter.isActive ? 'Kết quả lọc' : 'Giao dịch gần đây',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                ),
+                if (_filter.isActive)
+                  GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      setState(() => _filter = const _ExpenseFilter());
+                      _loadFilteredExpenses();
+                    },
+                    child: const Text(
+                      'Xóa lọc',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             if (expenseState.errorMessage != null) ...[
               const SizedBox(height: 8),
@@ -193,12 +325,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (expenseState.expenses.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Center(
-                  child: Text(
-                    'Chưa có khoản chi phù hợp.\nHãy chụp hoặc chọn một ảnh để bắt đầu.',
-                    textAlign: TextAlign.center,
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDark
+                              ? AppColors.surfaceDarkLight
+                              : AppColors.surfaceLightDark,
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_rounded,
+                          size: 36,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Chưa có khoản chi phù hợp.\nHãy chụp hoặc chọn một ảnh để bắt đầu.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
                   ),
                 ),
               )
@@ -232,10 +384,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final result = <Widget>[];
     for (final entry in groups.entries) {
       result.add(Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        padding: const EdgeInsets.only(top: 14, bottom: 6),
         child: Text(
           DateFormatter.formatDate(entry.key),
-          style: Theme.of(context).textTheme.titleSmall,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
         ),
       ));
       for (final expense in entry.value) {
@@ -285,41 +440,135 @@ class _SummaryCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('Hôm nay', today, Icons.today_outlined),
-      ('Tuần này', week, Icons.date_range_outlined),
-      ('Tháng này', month, Icons.calendar_month_outlined),
-    ];
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: items
-              .map(
-                (item) => Expanded(
-                  child: Semantics(
-                    label: '${item.$1}: ${CurrencyFormatter.format(item.$2)}',
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColors.balanceCardGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    color: AppColors.primaryLight,
+                    size: 18,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Tổng chi tháng này',
+                    style: TextStyle(
+                      color: Color(0xFFCBD5E1),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.4),
+                    width: 0.8,
+                  ),
+                ),
+                child: const Text(
+                  'VND',
+                  style: TextStyle(
+                    color: AppColors.primaryLight,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            CurrencyFormatter.format(month),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Hôm nay',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        CurrencyFormatter.format(today),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 24,
+                  color: Colors.white.withOpacity(0.12),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 14),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(item.$3),
-                        const SizedBox(height: 4),
-                        Text(item.$1, style: Theme.of(context).textTheme.labelMedium),
-                        const SizedBox(height: 4),
+                        const Text(
+                          'Tuần này',
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        ),
+                        const SizedBox(height: 3),
                         Text(
-                          CurrencyFormatter.format(item.$2),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          CurrencyFormatter.format(week),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              )
-              .toList(),
-        ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -335,7 +584,16 @@ class _BudgetProgressCard extends StatelessWidget {
     if (total <= 0) return const SizedBox.shrink();
     final progress = budgetState.budgetUsagePercent.clamp(0, 1).toDouble();
     final isOver = budgetState.budgetUsagePercent >= 1;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -343,23 +601,73 @@ class _BudgetProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.account_balance_wallet_outlined),
+                const Icon(
+                  Icons.track_changes_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Text('Ngân sách tháng', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Ngân sách tháng',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
                 const Spacer(),
-                Text('${(budgetState.budgetUsagePercent * 100).toStringAsFixed(0)}%'),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (isOver ? AppColors.priority3 : AppColors.primary)
+                        .withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${(budgetState.budgetUsagePercent * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      color: isOver ? AppColors.priority3 : AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 10,
+            ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              color: isOver ? Colors.red : null,
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: isDark
+                    ? AppColors.surfaceDarkLight
+                    : AppColors.surfaceLightDark,
+                color: isOver ? AppColors.priority3 : AppColors.primary,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${CurrencyFormatter.format(budgetState.totalSpent)} / ${CurrencyFormatter.format(total)}',
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Đã chi: ${CurrencyFormatter.format(budgetState.totalSpent)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
+                Text(
+                  'Hạn mức: ${CurrencyFormatter.format(total)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -387,66 +695,121 @@ class _ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dismissible(
       key: ValueKey('expense-${expense.id}'),
       direction: DismissDirection.endToStart,
       onDismissed: (_) => onMoveToTrash(),
       background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        color: Theme.of(context).colorScheme.error,
-        child: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.onError),
+        decoration: BoxDecoration(
+          color: AppColors.priority3,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(
+          Icons.delete_outline_rounded,
+          color: Colors.white,
+        ),
       ),
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
         child: ListTile(
           onTap: onTap,
-          contentPadding: const EdgeInsets.all(10),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           leading: GestureDetector(
             onTap: onImageTap,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: SizedBox(
-                width: 60,
-                height: 60,
-                child: expense.imagePath != null && File(expense.imagePath!).existsSync()
-                    ? Image.file(File(expense.imagePath!), fit: BoxFit.cover)
-                    : ColoredBox(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        child: const Icon(Icons.receipt_long_outlined),
-                      ),
+                width: 48,
+                height: 48,
+                child: _buildLeadingWidget(context),
               ),
             ),
           ),
-          title: Text(expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption),
-          subtitle: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Chip(
-                visualDensity: VisualDensity.compact,
-                avatar: Text(category?.icon ?? '🏷️'),
-                label: Text(category?.name ?? 'Khác'),
-              ),
-              if (priority != null)
+          title: Text(
+            expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
                 Chip(
                   visualDensity: VisualDensity.compact,
-                  label: Text(priority!.name),
-                  side: BorderSide(color: priority!.color),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                  avatar: Text(category?.icon ?? '🏷️'),
+                  label: Text(
+                    category?.name ?? 'Khác',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
-              Text(DateFormatter.formatTime(expense.createdAt)),
-            ],
+                if (priority != null)
+                  PriorityBadge(priority: expense.priority),
+                Text(
+                  DateFormatter.formatTime(expense.createdAt),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ],
+            ),
           ),
           trailing: Text(
             CurrencyFormatter.format(expense.amount),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.error,
-                  fontWeight: FontWeight.bold,
-                ),
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLeadingWidget(BuildContext context) {
+    final img = expense.imagePath;
+    if (img != null && img.isNotEmpty) {
+      if (img.startsWith('http')) {
+        return CachedNetworkImage(
+          imageUrl: img,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => const Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          errorWidget: (_, __, ___) => CategoryIconBadge(
+            iconKey: category?.icon ?? 'dotsThreeOutline',
+            size: 48,
+          ),
+        );
+      }
+      final file = File(img);
+      if (file.existsSync()) {
+        return Image.file(file, fit: BoxFit.cover);
+      }
+    }
+
+    return CategoryIconBadge(
+      iconKey: category?.icon ?? 'dotsThreeOutline',
+      size: 48,
+      iconSize: 24,
     );
   }
 }
@@ -527,8 +890,10 @@ class _FilterSheetState extends State<_FilterSheet> {
     _dateRange = widget.initial.dateRange;
     _categoryId = widget.initial.categoryId;
     _priorityId = widget.initial.priorityId;
-    _minController = TextEditingController(text: widget.initial.minAmount?.toInt().toString() ?? '');
-    _maxController = TextEditingController(text: widget.initial.maxAmount?.toInt().toString() ?? '');
+    _minController = TextEditingController(
+        text: widget.initial.minAmount?.toInt().toString() ?? '');
+    _maxController = TextEditingController(
+        text: widget.initial.maxAmount?.toInt().toString() ?? '');
   }
 
   @override
@@ -566,7 +931,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _pickDateRange,
-                  icon: const Icon(Icons.date_range_outlined),
+                  icon: const Icon(Icons.calendar_today_rounded),
                   label: Text(
                     _dateRange == null
                         ? 'Chọn khoảng thời gian'
@@ -576,7 +941,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                 if (_dateRange != null)
                   TextButton.icon(
                     onPressed: () => setState(() => _dateRange = null),
-                    icon: const Icon(Icons.clear),
+                    icon: const Icon(Icons.close_rounded),
                     label: const Text('Bỏ lọc thời gian'),
                   ),
                 const SizedBox(height: 12),
@@ -629,7 +994,6 @@ class _FilterSheetState extends State<_FilterSheet> {
                         decoration: const InputDecoration(
                           labelText: 'Từ số tiền',
                           suffixText: '₫',
-                          border: OutlineInputBorder(),
                         ),
                       ),
                     ),
@@ -641,7 +1005,6 @@ class _FilterSheetState extends State<_FilterSheet> {
                         decoration: const InputDecoration(
                           labelText: 'Đến số tiền',
                           suffixText: '₫',
-                          border: OutlineInputBorder(),
                         ),
                       ),
                     ),

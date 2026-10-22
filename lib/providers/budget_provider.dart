@@ -10,6 +10,9 @@ import '../data/repositories/expense_repository.dart';
 class BudgetValidationException implements Exception {
   final String message;
   const BudgetValidationException(this.message);
+
+  @override
+  String toString() => message;
 }
 
 class BudgetState {
@@ -128,7 +131,7 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
         categoryBudgets: categoryBudgets,
         categorySpent: categorySpent,
         totalSpent: totalSpent,
-        allocatedAmount: categoryBudgets.values.fold(0, (sum, amount) => sum + amount),
+        allocatedAmount: categoryBudgets.values.fold<double>(0.0, (sum, amount) => sum + amount),
         budgetUsagePercent: usagePercent,
         isOverBudget: usagePercent >= 1,
         isLoading: false,

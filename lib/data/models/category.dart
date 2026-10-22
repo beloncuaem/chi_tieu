@@ -45,7 +45,9 @@ class Category {
       name: map['name'] as String,
       icon: map['icon'] as String,
       isDefault: (map['is_default'] as int) == 1,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: map['created_at'] != null
+          ? DateTime.tryParse(map['created_at'] as String)
+          : null,
     );
   }
 }

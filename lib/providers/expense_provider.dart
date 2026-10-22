@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/expense.dart';
 import '../data/repositories/expense_repository.dart';
 import 'budget_provider.dart';
+import 'statistics_provider.dart';
 
 class ExpenseState {
   final List<Expense> expenses;
@@ -116,6 +117,9 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     await _ref
         .read(budgetProvider.notifier)
         .refreshCurrentMonthAfterExpenseChange();
+    await _ref
+        .read(statisticsProvider.notifier)
+        .refreshStatistics();
   }
 
   Future<void> updateExpense(Expense expense) async {
@@ -124,6 +128,9 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     await _ref
         .read(budgetProvider.notifier)
         .refreshCurrentMonthAfterExpenseChange();
+    await _ref
+        .read(statisticsProvider.notifier)
+        .refreshStatistics();
   }
 
   Future<void> moveToTrash(int id) async {
@@ -132,6 +139,9 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     await _ref
         .read(budgetProvider.notifier)
         .refreshCurrentMonthAfterExpenseChange();
+    await _ref
+        .read(statisticsProvider.notifier)
+        .refreshStatistics();
   }
 
   Future<void> restoreExpense(int id) async {
@@ -140,6 +150,9 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     await _ref
         .read(budgetProvider.notifier)
         .refreshCurrentMonthAfterExpenseChange();
+    await _ref
+        .read(statisticsProvider.notifier)
+        .refreshStatistics();
   }
 
   Future<List<Expense>> getDeletedExpenses() =>

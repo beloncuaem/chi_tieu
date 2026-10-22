@@ -272,8 +272,9 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
                             fontWeight: selected ? FontWeight.bold : null,
                           ),
                           onSelected: (value) {
-                            if (value)
+                            if (value) {
                               setState(() => _selectedPriority = level.id);
+                            }
                           },
                         );
                       }).toList(),

@@ -7,9 +7,9 @@ import 'package:chi_tieu/data/models/category.dart';
 void main() {
   group('CurrencyFormatter Tests', () {
     test('Formats VND properly', () {
-      expect(CurrencyFormatter.format(35000), '35,000đ');
-      expect(CurrencyFormatter.format(1500000), '1,500,000đ');
-      expect(CurrencyFormatter.format(0), '0đ');
+      expect(CurrencyFormatter.format(35000), '35.000\u00a0đ');
+      expect(CurrencyFormatter.format(1500000), '1.500.000\u00a0đ');
+      expect(CurrencyFormatter.format(0), '0\u00a0đ');
     });
   });
 
