@@ -69,7 +69,10 @@ class IconHelper {
     return Icon(Icons.label_outline_rounded, size: size, color: color);
   }
 
-  static Color parseColor(String? colorHex, {Color defaultColor = const Color(0xFF10B981)}) {
+  static Color parseColor(
+    String? colorHex, {
+    Color defaultColor = const Color(0xFF10B981),
+  }) {
     if (colorHex == null || colorHex.isEmpty) return defaultColor;
     try {
       final hex = colorHex.replaceAll('#', '');
@@ -82,4 +85,3 @@ class IconHelper {
     return defaultColor;
   }
 }
-

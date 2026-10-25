@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../core/config/supabase_config.dart';
 import '../database/database_helper.dart';
 import '../models/expense.dart';
@@ -14,20 +15,26 @@ class ExpenseRepository {
     if (client != null && user != null) {
       try {
         String? imageUrl = expense.imagePath;
-        if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+        if (imageUrl != null &&
+            imageUrl.isNotEmpty &&
+            !imageUrl.startsWith('http')) {
           imageUrl = await _storageService.uploadReceiptImage(imageUrl);
         }
 
-        final row = await client.from('expenses').insert({
-          'user_id': user.id,
-          'caption': expense.caption,
-          'amount': expense.amount,
-          'category_id': expense.categoryId,
-          'priority': expense.priority,
-          'image_url': imageUrl,
-          'created_at': expense.createdAt.toIso8601String(),
-          'deleted_at': expense.deletedAt?.toIso8601String(),
-        }).select().single();
+        final row = await client
+            .from('expenses')
+            .insert({
+              'user_id': user.id,
+              'caption': expense.caption,
+              'amount': expense.amount,
+              'category_id': expense.categoryId,
+              'priority': expense.priority,
+              'image_url': imageUrl,
+              'created_at': expense.createdAt.toIso8601String(),
+              'deleted_at': expense.deletedAt?.toIso8601String(),
+            })
+            .select()
+            .single();
 
         return row['id'] as int;
       } catch (e) {
@@ -46,19 +53,24 @@ class ExpenseRepository {
     if (client != null && user != null && expense.id != null) {
       try {
         String? imageUrl = expense.imagePath;
-        if (imageUrl != null && imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+        if (imageUrl != null &&
+            imageUrl.isNotEmpty &&
+            !imageUrl.startsWith('http')) {
           imageUrl = await _storageService.uploadReceiptImage(imageUrl);
         }
 
-        await client.from('expenses').update({
-          'caption': expense.caption,
-          'amount': expense.amount,
-          'category_id': expense.categoryId,
-          'priority': expense.priority,
-          'image_url': imageUrl,
-          'created_at': expense.createdAt.toIso8601String(),
-          'deleted_at': expense.deletedAt?.toIso8601String(),
-        }).eq('id', expense.id!);
+        await client
+            .from('expenses')
+            .update({
+              'caption': expense.caption,
+              'amount': expense.amount,
+              'category_id': expense.categoryId,
+              'priority': expense.priority,
+              'image_url': imageUrl,
+              'created_at': expense.createdAt.toIso8601String(),
+              'deleted_at': expense.deletedAt?.toIso8601String(),
+            })
+            .eq('id', expense.id!);
 
         return 1;
       } catch (e) {
@@ -89,7 +101,10 @@ class ExpenseRepository {
 
     if (client != null && user != null) {
       try {
-        var query = client.from('expenses').select().isFilter('deleted_at', null);
+        var query = client
+            .from('expenses')
+            .select()
+            .isFilter('deleted_at', null);
 
         if (from != null) {
           query = query.gte('created_at', from.toIso8601String());
@@ -218,11 +233,7 @@ class ExpenseRepository {
     DateTime from,
     DateTime to,
   ) async {
-    final expenses = await getExpenses(
-      priority: priority,
-      from: from,
-      to: to,
-    );
+    final expenses = await getExpenses(priority: priority, from: from, to: to);
     return expenses.fold<double>(0.0, (sum, item) => sum + item.amount);
   }
 
@@ -232,9 +243,10 @@ class ExpenseRepository {
 
     if (client != null && user != null) {
       try {
-        await client.from('expenses').update({
-          'deleted_at': DateTime.now().toIso8601String(),
-        }).eq('id', id);
+        await client
+            .from('expenses')
+            .update({'deleted_at': DateTime.now().toIso8601String()})
+            .eq('id', id);
         return 1;
       } catch (e) {
         debugPrint('Supabase moveToTrash error: $e');
@@ -256,9 +268,7 @@ class ExpenseRepository {
 
     if (client != null && user != null) {
       try {
-        await client.from('expenses').update({
-          'deleted_at': null,
-        }).eq('id', id);
+        await client.from('expenses').update({'deleted_at': null}).eq('id', id);
         return 1;
       } catch (e) {
         debugPrint('Supabase restoreExpense error: $e');
@@ -373,7 +383,8 @@ class ExpenseRepository {
     final expenses = await getExpenses(from: from, to: to);
     final map = <String, double>{};
     for (final exp in expenses) {
-      final key = '${exp.createdAt.year}-${exp.createdAt.month.toString().padLeft(2, '0')}-${exp.createdAt.day.toString().padLeft(2, '0')}';
+      final key =
+          '${exp.createdAt.year}-${exp.createdAt.month.toString().padLeft(2, '0')}-${exp.createdAt.day.toString().padLeft(2, '0')}';
       map[key] = (map[key] ?? 0.0) + exp.amount;
     }
     return map;

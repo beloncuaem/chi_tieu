@@ -19,9 +19,7 @@ void main() {
           overrides: [
             themeProvider.overrideWith((ref) => _MockThemeNotifier()),
           ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
+          child: const MaterialApp(home: SettingsScreen()),
         ),
       );
 
@@ -36,11 +34,7 @@ void main() {
   group('OnboardingScreen Widget Tests', () {
     testWidgets('Renders onboarding elements', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: OnboardingScreen(),
-          ),
-        ),
+        const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
       );
 
       expect(find.text('Bỏ qua'), findsOneWidget);
@@ -54,13 +48,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            categoryProvider.overrideWith(
-              (ref) => _MockCategoryNotifier(),
-            ),
+            categoryProvider.overrideWith((ref) => _MockCategoryNotifier()),
           ],
-          child: const MaterialApp(
-            home: ManageCategoriesScreen(),
-          ),
+          child: const MaterialApp(home: ManageCategoriesScreen()),
         ),
       );
 
@@ -72,16 +62,16 @@ void main() {
   });
 
   group('TrashScreen Widget Tests', () {
-    testWidgets('Renders empty trash screen when no deleted expenses', (tester) async {
+    testWidgets('Renders empty trash screen when no deleted expenses', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             categoryProvider.overrideWith((ref) => _MockCategoryNotifier()),
             expenseProvider.overrideWith((ref) => _MockExpenseNotifier()),
           ],
-          child: const MaterialApp(
-            home: TrashScreen(),
-          ),
+          child: const MaterialApp(home: TrashScreen()),
         ),
       );
 
@@ -103,15 +93,15 @@ class _MockThemeNotifier extends StateNotifier<ThemeMode>
 class _MockCategoryNotifier extends StateNotifier<CategoryState>
     implements CategoryNotifier {
   _MockCategoryNotifier()
-      : super(
-          CategoryState(
-            categories: [
-              Category(id: 1, name: 'Ăn uống', icon: '🍜', isDefault: true),
-              Category(id: 2, name: 'Nhà ở', icon: '🏠', isDefault: true),
-            ],
-            isLoading: false,
-          ),
-        );
+    : super(
+        CategoryState(
+          categories: [
+            Category(id: 1, name: 'Ăn uống', icon: '🍜', isDefault: true),
+            Category(id: 2, name: 'Nhà ở', icon: '🏠', isDefault: true),
+          ],
+          isLoading: false,
+        ),
+      );
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -127,4 +117,3 @@ class _MockExpenseNotifier extends StateNotifier<ExpenseState>
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
-

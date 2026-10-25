@@ -8,11 +8,29 @@ class ManageCategoriesScreen extends ConsumerWidget {
   const ManageCategoriesScreen({super.key});
 
   static const _emojis = [
-    '🛒', '🍜', '☕', '🚗', '🏠', '💊', '🎓', '🎮', '💡',
-    '👕', '🎁', '🎬', '⚽', '✈️', '🐶', '🏷️',
+    '🛒',
+    '🍜',
+    '☕',
+    '🚗',
+    '🏠',
+    '💊',
+    '🎓',
+    '🎮',
+    '💡',
+    '👕',
+    '🎁',
+    '🎬',
+    '⚽',
+    '✈️',
+    '🐶',
+    '🏷️',
   ];
 
-  Future<void> _showCategoryDialog(BuildContext context, WidgetRef ref, {Category? category}) async {
+  Future<void> _showCategoryDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    Category? category,
+  }) async {
     final controller = TextEditingController(text: category?.name ?? '');
     var selectedEmoji = category?.icon ?? _emojis.first;
     final isEditing = category != null;
@@ -35,9 +53,13 @@ class ManageCategoriesScreen extends ConsumerWidget {
                   children: _emojis
                       .map(
                         (emoji) => ChoiceChip(
-                          label: Text(emoji, style: const TextStyle(fontSize: 18)),
+                          label: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 18),
+                          ),
                           selected: emoji == selectedEmoji,
-                          onSelected: (_) => setDialogState(() => selectedEmoji = emoji),
+                          onSelected: (_) =>
+                              setDialogState(() => selectedEmoji = emoji),
                         ),
                       )
                       .toList(),
@@ -66,11 +88,15 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 final name = controller.text.trim();
                 if (name.isEmpty) return;
                 if (isEditing) {
-                  await ref.read(categoryProvider.notifier).updateCategory(
+                  await ref
+                      .read(categoryProvider.notifier)
+                      .updateCategory(
                         category.copyWith(name: name, icon: selectedEmoji),
                       );
                 } else {
-                  await ref.read(categoryProvider.notifier).addCategory(name, selectedEmoji);
+                  await ref
+                      .read(categoryProvider.notifier)
+                      .addCategory(name, selectedEmoji);
                 }
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
@@ -83,7 +109,11 @@ class ManageCategoriesScreen extends ConsumerWidget {
     controller.dispose();
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Category category) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -93,7 +123,10 @@ class ManageCategoriesScreen extends ConsumerWidget {
           'Ngân sách của danh mục này sẽ bị xóa.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
           FilledButton.tonal(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Xóa'),
@@ -120,10 +153,18 @@ class ManageCategoriesScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final category = state.categories[index];
                 return ListTile(
-                  onTap: () => _showCategoryDialog(context, ref, category: category),
-                  leading: Text(category.icon, style: const TextStyle(fontSize: 26)),
+                  onTap: () =>
+                      _showCategoryDialog(context, ref, category: category),
+                  leading: Text(
+                    category.icon,
+                    style: const TextStyle(fontSize: 26),
+                  ),
                   title: Text(category.name),
-                  subtitle: Text(category.isDefault ? 'Danh mục mặc định' : 'Chạm để chỉnh sửa'),
+                  subtitle: Text(
+                    category.isDefault
+                        ? 'Danh mục mặc định'
+                        : 'Chạm để chỉnh sửa',
+                  ),
                   trailing: category.isDefault
                       ? const Tooltip(
                           message: 'Danh mục mặc định không thể xóa',
@@ -132,7 +173,8 @@ class ManageCategoriesScreen extends ConsumerWidget {
                       : IconButton(
                           tooltip: 'Xóa danh mục',
                           icon: const Icon(Icons.delete_outline),
-                          onPressed: () => _confirmDelete(context, ref, category),
+                          onPressed: () =>
+                              _confirmDelete(context, ref, category),
                         ),
                 );
               },

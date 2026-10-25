@@ -38,9 +38,14 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xóa vĩnh viễn?'),
-        content: const Text('Khoản chi và ảnh đính kèm sẽ không thể khôi phục.'),
+        content: const Text(
+          'Khoản chi và ảnh đính kèm sẽ không thể khôi phục.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
           FilledButton.tonal(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Xóa vĩnh viễn'),
@@ -56,7 +61,8 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
   @override
   Widget build(BuildContext context) {
     final categoryMap = {
-      for (final category in ref.watch(categoryProvider).categories) category.id: category,
+      for (final category in ref.watch(categoryProvider).categories)
+        category.id: category,
     };
     return Scaffold(
       appBar: AppBar(title: const Text('Thùng rác')),
@@ -85,16 +91,27 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
                     child: SizedBox(
                       height: 56,
                       width: 56,
-                      child: expense.imagePath != null && File(expense.imagePath!).existsSync()
-                          ? Image.file(File(expense.imagePath!), fit: BoxFit.cover)
+                      child:
+                          expense.imagePath != null &&
+                              File(expense.imagePath!).existsSync()
+                          ? Image.file(
+                              File(expense.imagePath!),
+                              fit: BoxFit.cover,
+                            )
                           : const ColoredBox(
                               color: Colors.black12,
                               child: Icon(Icons.broken_image_outlined),
                             ),
                     ),
                   ),
-                  title: Text(expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption),
-                  subtitle: Text('${category?.icon ?? '🏷️'} ${category?.name ?? 'Khác'}'),
+                  title: Text(
+                    expense.caption.isEmpty
+                        ? 'Không có ghi chú'
+                        : expense.caption,
+                  ),
+                  subtitle: Text(
+                    '${category?.icon ?? '🏷️'} ${category?.name ?? 'Khác'}',
+                  ),
                   trailing: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -107,8 +124,14 @@ class _TrashScreenState extends ConsumerState<TrashScreen> {
                           if (value == 'delete') _deleteForever(expense);
                         },
                         itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'restore', child: Text('Khôi phục')),
-                          PopupMenuItem(value: 'delete', child: Text('Xóa vĩnh viễn')),
+                          PopupMenuItem(
+                            value: 'restore',
+                            child: Text('Khôi phục'),
+                          ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Xóa vĩnh viễn'),
+                          ),
                         ],
                       ),
                     ],

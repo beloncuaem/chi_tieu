@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -44,11 +45,7 @@ class ExpenseCard extends StatelessWidget {
           child: Row(
             children: [
               // Category Icon Badge
-              CategoryIconBadge(
-                iconKey: category.icon,
-                size: 44,
-                iconSize: 22,
-              ),
+              CategoryIconBadge(iconKey: category.icon, size: 44, iconSize: 22),
               const SizedBox(width: 12),
 
               // Title and Category / Time
@@ -94,7 +91,8 @@ class ExpenseCard extends StatelessWidget {
               ),
 
               // Thumbnail (if available)
-              if (expense.imagePath != null && expense.imagePath!.isNotEmpty) ...[
+              if (expense.imagePath != null &&
+                  expense.imagePath!.isNotEmpty) ...[
                 GestureDetector(
                   onTap: () => _showImagePreview(context, expense.imagePath!),
                   child: Container(
@@ -104,7 +102,9 @@ class ExpenseCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
                       ),
                     ),
                     child: ClipRRect(
@@ -118,7 +118,10 @@ class ExpenseCard extends StatelessWidget {
               // Amount
               Text(
                 CurrencyFormatter.format(expense.amount),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
@@ -139,9 +142,8 @@ class ExpenseCard extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-        errorWidget: (_, __, ___) => const Center(
-          child: Icon(Icons.receipt_long_rounded, size: 18),
-        ),
+        errorWidget: (_, __, ___) =>
+            const Center(child: Icon(Icons.receipt_long_rounded, size: 18)),
       );
     }
 
@@ -150,9 +152,7 @@ class ExpenseCard extends StatelessWidget {
       return Image.file(file, fit: BoxFit.cover);
     }
 
-    return const Center(
-      child: Icon(Icons.image_rounded, size: 18),
-    );
+    return const Center(child: Icon(Icons.image_rounded, size: 18));
   }
 
   void _showImagePreview(BuildContext context, String path) {

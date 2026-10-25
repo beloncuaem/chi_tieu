@@ -43,8 +43,9 @@ class BudgetState {
   });
 
   double get totalBudgetAmount => totalBudget?.amount ?? 0;
-  double get unallocatedAmount =>
-      (totalBudgetAmount - allocatedAmount).clamp(0, double.infinity).toDouble();
+  double get unallocatedAmount => (totalBudgetAmount - allocatedAmount)
+      .clamp(0, double.infinity)
+      .toDouble();
 
   BudgetState copyWith({
     String? month,
@@ -79,7 +80,7 @@ class BudgetState {
 
 class BudgetNotifier extends StateNotifier<BudgetState> {
   BudgetNotifier()
-      : super(BudgetState(month: DateFormat('yyyy-MM').format(DateTime.now()))) {
+    : super(BudgetState(month: DateFormat('yyyy-MM').format(DateTime.now()))) {
     loadBudgets(state.month);
   }
 
@@ -110,7 +111,10 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
         from: startOfMonth,
         to: endOfMonth,
       );
-      final totalSpent = expenses.fold<double>(0, (sum, item) => sum + item.amount);
+      final totalSpent = expenses.fold<double>(
+        0,
+        (sum, item) => sum + item.amount,
+      );
       final categorySpent = <int, double>{};
       for (final expense in expenses) {
         categorySpent.update(
@@ -131,13 +135,17 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
         categoryBudgets: categoryBudgets,
         categorySpent: categorySpent,
         totalSpent: totalSpent,
-        allocatedAmount: categoryBudgets.values.fold<double>(0.0, (sum, amount) => sum + amount),
+        allocatedAmount: categoryBudgets.values.fold<double>(
+          0.0,
+          (sum, amount) => sum + amount,
+        ),
         budgetUsagePercent: usagePercent,
         isOverBudget: usagePercent >= 1,
         isLoading: false,
       );
 
-      if (checkAlerts && month == DateFormat('yyyy-MM').format(DateTime.now())) {
+      if (checkAlerts &&
+          month == DateFormat('yyyy-MM').format(DateTime.now())) {
         await _sendNewAlerts();
       }
     } catch (_) {
@@ -158,13 +166,17 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
       }
       await NotificationService.instance.showBudgetAlert(
         threshold: threshold,
-        monthLabel: DateFormat('MM/yyyy').format(DateTime.parse('${state.month}-01')),
+        monthLabel: DateFormat('MM/yyyy')
+            .format(DateTime.parse('${state.month}-01')),
       );
       await _alertRepository.markSent(state.month, threshold);
     }
   }
 
-  Future<void> setTotalBudget({required String month, required double amount}) async {
+  Future<void> setTotalBudget({
+    required String month,
+    required double amount,
+  }) async {
     final allocated = await _repository.getAllocatedAmount(month);
     if (amount < allocated) {
       throw const BudgetValidationException(
@@ -190,7 +202,10 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
         'Hãy nhập ngân sách tổng trước khi phân bổ theo danh mục.',
       );
     }
-    final allocation = categoryBudgets.values.fold<double>(0, (sum, value) => sum + value);
+    final allocation = categoryBudgets.values.fold<double>(
+      0,
+      (sum, value) => sum + value,
+    );
     if (allocation > totalBudget.amount) {
       throw const BudgetValidationException(
         'Tổng phân bổ không được vượt ngân sách tổng.',
@@ -225,5 +240,6 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
   }
 }
 
-final budgetProvider =
-    StateNotifierProvider<BudgetNotifier, BudgetState>((ref) => BudgetNotifier());
+final budgetProvider = StateNotifierProvider<BudgetNotifier, BudgetState>(
+  (ref) => BudgetNotifier(),
+);

@@ -11,11 +11,7 @@ void main() {
   group('AmountDisplay Widget Tests', () {
     testWidgets('Renders formatted currency text', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AmountDisplay(amount: 150000),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AmountDisplay(amount: 150000))),
       );
 
       expect(find.text('150.000\u00a0đ'), findsOneWidget);
@@ -41,38 +37,38 @@ void main() {
   });
 
   group('PriorityBadge Widget Tests', () {
-    testWidgets('Renders correct label for priority 0 (Thiết yếu)', (tester) async {
+    testWidgets('Renders correct label for priority 0 (Thiết yếu)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PriorityBadge(priority: 0)),
-        ),
+        const MaterialApp(home: Scaffold(body: PriorityBadge(priority: 0))),
       );
       expect(find.text('Thiết yếu'), findsOneWidget);
     });
 
-    testWidgets('Renders correct label for priority 1 (Rất cần)', (tester) async {
+    testWidgets('Renders correct label for priority 1 (Rất cần)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PriorityBadge(priority: 1)),
-        ),
+        const MaterialApp(home: Scaffold(body: PriorityBadge(priority: 1))),
       );
       expect(find.text('Rất cần'), findsOneWidget);
     });
 
-    testWidgets('Renders correct label for priority 2 (Cần vừa)', (tester) async {
+    testWidgets('Renders correct label for priority 2 (Cần vừa)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PriorityBadge(priority: 2)),
-        ),
+        const MaterialApp(home: Scaffold(body: PriorityBadge(priority: 2))),
       );
       expect(find.text('Cần vừa'), findsOneWidget);
     });
 
-    testWidgets('Renders correct label for priority 3 (Chưa cần)', (tester) async {
+    testWidgets('Renders correct label for priority 3 (Chưa cần)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PriorityBadge(priority: 3)),
-        ),
+        const MaterialApp(home: Scaffold(body: PriorityBadge(priority: 3))),
       );
       expect(find.text('Chưa cần'), findsOneWidget);
     });
@@ -131,4 +127,3 @@ void main() {
     });
   });
 }
-

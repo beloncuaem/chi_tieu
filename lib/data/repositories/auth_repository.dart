@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../core/config/supabase_config.dart';
 
 class AuthRepository {
@@ -18,7 +22,9 @@ class AuthRepository {
   }) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase chưa được cấu hình. Vui lòng kiểm tra file .env');
+      throw Exception(
+        'Supabase chưa được cấu hình. Vui lòng kiểm tra file .env',
+      );
     }
 
     return await client.auth.signUp(
@@ -36,7 +42,9 @@ class AuthRepository {
   }) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase chưa được cấu hình. Vui lòng kiểm tra file .env');
+      throw Exception(
+        'Supabase chưa được cấu hình. Vui lòng kiểm tra file .env',
+      );
     }
 
     return await client.auth.signInWithPassword(
@@ -48,7 +56,13 @@ class AuthRepository {
   Future<bool> signInWithGoogle() async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase chưa được cấu hình. Vui lòng kiểm tra file .env');
+      throw Exception(
+        'Supabase chưa được cấu hình. Vui lòng kiểm tra file .env',
+      );
+    }
+
+    if (!await isGoogleProviderEnabled()) {
+      throw Exception('provider is not enabled');
     }
 
     try {
@@ -62,6 +76,40 @@ class AuthRepository {
     }
   }
 
+  /// Kiểm tra provider Google trên Supabase trước khi mở trình duyệt, tránh
+  /// người dùng rơi vào trang JSON "Unsupported provider" khó hiểu.
+  Future<bool> isGoogleProviderEnabled() async {
+    final url = SupabaseConfig.projectUrl;
+    final key = SupabaseConfig.publishableKey;
+    if (url == null || key == null) {
+      return true;
+    }
+
+    try {
+      final response = await http
+          .get(Uri.parse('$url/auth/v1/settings'), headers: {'apikey': key})
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) {
+        return true;
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        return true;
+      }
+
+      final external = data['external'];
+      if (external is Map<String, dynamic> && external['google'] is bool) {
+        return external['google'] as bool;
+      }
+    } catch (error) {
+      debugPrint('Could not check Google provider status: $error');
+    }
+
+    // Không chặn đăng nhập nếu bước kiểm tra gặp sự cố mạng.
+    return true;
+  }
+
   Future<void> signOut() async {
     final client = _client;
     if (client != null) {
@@ -72,9 +120,10 @@ class AuthRepository {
   Future<void> resetPassword(String email) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase chưa được cấu hình. Vui lòng kiểm tra file .env');
+      throw Exception(
+        'Supabase chưa được cấu hình. Vui lòng kiểm tra file .env',
+      );
     }
     await client.auth.resetPasswordForEmail(email.trim());
   }
 }
-

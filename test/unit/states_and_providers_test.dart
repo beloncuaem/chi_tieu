@@ -82,10 +82,7 @@ void main() {
 
     test('StatisticsState copyWith works properly', () {
       final state = StatisticsState(totalAmount: 500000);
-      final updated = state.copyWith(
-        totalAmount: 900000,
-        isLoading: true,
-      );
+      final updated = state.copyWith(totalAmount: 900000, isLoading: true);
 
       expect(updated.totalAmount, 900000);
       expect(updated.isLoading, true);
@@ -127,10 +124,7 @@ void main() {
     test('CategoryState updates categories and error correctly', () {
       final cat = Category(id: 1, name: 'Ăn uống', icon: '🍜', isDefault: true);
       const state = CategoryState(isLoading: true);
-      final updated = state.copyWith(
-        categories: [cat],
-        isLoading: false,
-      );
+      final updated = state.copyWith(categories: [cat], isLoading: false);
 
       expect(updated.categories.length, 1);
       expect(updated.isLoading, false);
@@ -158,8 +152,14 @@ void main() {
 
   group('AppSettingsState Logic Tests', () {
     test('AppSettingsState tracks onboarding status', () {
-      const state = AppSettingsState(isLoading: true, onboardingComplete: false);
-      final updated = state.copyWith(isLoading: false, onboardingComplete: true);
+      const state = AppSettingsState(
+        isLoading: true,
+        onboardingComplete: false,
+      );
+      final updated = state.copyWith(
+        isLoading: false,
+        onboardingComplete: true,
+      );
 
       expect(updated.isLoading, false);
       expect(updated.onboardingComplete, true);

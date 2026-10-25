@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../core/config/supabase_config.dart';
 import '../database/database_helper.dart';
 import '../models/budget.dart';
@@ -53,12 +54,16 @@ class BudgetRepository {
 
     if (client != null && user != null) {
       try {
-        final row = await client.from('budgets').upsert({
-          'user_id': user.id,
-          'month': budget.month,
-          'category_id': budget.categoryId,
-          'amount': budget.amount,
-        }, onConflict: 'user_id,month,category_id').select().single();
+        final row = await client
+            .from('budgets')
+            .upsert({
+              'user_id': user.id,
+              'month': budget.month,
+              'category_id': budget.categoryId,
+              'amount': budget.amount,
+            }, onConflict: 'user_id,month,category_id')
+            .select()
+            .single();
         return row['id'] as int;
       } catch (e) {
         debugPrint('Supabase setBudget error, fallback to SQLite: $e');

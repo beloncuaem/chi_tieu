@@ -44,10 +44,10 @@ void main() {
 
     test('Parses hex colors safely', () {
       final color = IconHelper.parseColor('#10B981');
-      expect(color.value, const Color(0xFF10B981).value);
+      expect(color.toARGB32(), const Color(0xFF10B981).toARGB32());
 
       final fallback = IconHelper.parseColor('invalid_color');
-      expect(fallback.value, const Color(0xFF10B981).value);
+      expect(fallback.toARGB32(), const Color(0xFF10B981).toARGB32());
     });
   });
 
@@ -63,9 +63,7 @@ void main() {
     testWidgets('Renders CategoryIconBadge without throwing', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: CategoryIconBadge(iconKey: 'forkKnife'),
-          ),
+          home: Scaffold(body: CategoryIconBadge(iconKey: 'forkKnife')),
         ),
       );
 
@@ -73,4 +71,3 @@ void main() {
     });
   });
 }
-

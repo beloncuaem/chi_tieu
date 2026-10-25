@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/utils/icon_helper.dart';
 
 class CategoryIconBadge extends StatelessWidget {
@@ -24,10 +25,10 @@ class CategoryIconBadge extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: baseColor.withOpacity(isDark ? 0.2 : 0.12),
+        color: baseColor.withValues(alpha: isDark ? 0.2 : 0.12),
         borderRadius: BorderRadius.circular(size * 0.35),
         border: Border.all(
-          color: baseColor.withOpacity(isDark ? 0.35 : 0.2),
+          color: baseColor.withValues(alpha: isDark ? 0.35 : 0.2),
           width: 1,
         ),
       ),
@@ -41,4 +42,3 @@ class CategoryIconBadge extends StatelessWidget {
     );
   }
 }
-

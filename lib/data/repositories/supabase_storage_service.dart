@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+
 import '../../core/config/supabase_config.dart';
 
 class SupabaseStorageService {
@@ -20,12 +22,11 @@ class SupabaseStorageService {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
       final storagePath = '${user.id}/$fileName';
 
-      await client.storage.from(bucketName).upload(
-            storagePath,
-            file,
-          );
+      await client.storage.from(bucketName).upload(storagePath, file);
 
-      final publicUrl = client.storage.from(bucketName).getPublicUrl(storagePath);
+      final publicUrl = client.storage
+          .from(bucketName)
+          .getPublicUrl(storagePath);
       return publicUrl;
     } catch (e) {
       debugPrint('Error uploading receipt to Supabase Storage: $e');
@@ -48,4 +49,3 @@ class SupabaseStorageService {
     }
   }
 }
-

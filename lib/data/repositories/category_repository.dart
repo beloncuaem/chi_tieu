@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' hide Category;
+
 import '../../core/config/supabase_config.dart';
 import '../database/database_helper.dart';
 import '../models/category.dart';
@@ -82,13 +83,17 @@ class CategoryRepository {
 
     if (client != null && user != null) {
       try {
-        final row = await client.from('categories').insert({
-          'user_id': user.id,
-          'name': category.name,
-          'icon': category.icon,
-          'color_hex': '#10B981',
-          'is_default': false,
-        }).select().single();
+        final row = await client
+            .from('categories')
+            .insert({
+              'user_id': user.id,
+              'name': category.name,
+              'icon': category.icon,
+              'color_hex': '#10B981',
+              'is_default': false,
+            })
+            .select()
+            .single();
         return row['id'] as int;
       } catch (e) {
         debugPrint('Supabase insert category error: $e');
@@ -109,10 +114,10 @@ class CategoryRepository {
 
     if (client != null && user != null && category.id != null) {
       try {
-        await client.from('categories').update({
-          'name': category.name,
-          'icon': category.icon,
-        }).eq('id', category.id!);
+        await client
+            .from('categories')
+            .update({'name': category.name, 'icon': category.icon})
+            .eq('id', category.id!);
         return 1;
       } catch (e) {
         debugPrint('Supabase update category error: $e');

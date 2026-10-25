@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/config/supabase_config.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
 
@@ -26,26 +29,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    final success = await ref.read(authProvider.notifier).signInWithEmail(
-          _emailController.text,
-          _passwordController.text,
-        );
-    if (!success && mounted) {
-      final error = ref.read(authProvider).errorMessage;
-      if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: AppColors.priority3,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    final success = await ref
+        .read(authProvider.notifier)
+        .signInWithEmail(_emailController.text, _passwordController.text);
+    if (!mounted) return;
+    if (success) {
+      await ref.read(appSettingsProvider.notifier).exitOffline();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
+      return;
+    }
+    final error = ref.read(authProvider).errorMessage;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: AppColors.priority3,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
   Future<void> _handleGoogleSignIn() async {
-    await ref.read(authProvider.notifier).signInWithGoogle();
+    final launched = await ref.read(authProvider.notifier).signInWithGoogle();
+    if (!mounted) return;
+    if (launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Đã mở trình duyệt. Hoàn tất đăng nhập Google rồi quay lại app.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final error = ref.read(authProvider).errorMessage;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: AppColors.priority3,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _continueOffline() async {
+    await ref.read(appSettingsProvider.notifier).continueOffline();
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -74,7 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -94,11 +131,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     'Chào mừng trở lại',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -118,10 +155,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.priority2.withOpacity(0.12),
+                        color: AppColors.priority2.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.priority2.withOpacity(0.3),
+                          color: AppColors.priority2.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -134,10 +171,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Chưa cấu hình Supabase trong file .env. Vui lòng thêm SUPABASE_URL và SUPABASE_ANON_KEY để kết nối.',
+                              SupabaseConfig.initializationError ?? 'Chưa cấu hình Supabase trong file .env. Vui lòng thêm SUPABASE_URL và SUPABASE_ANON_KEY để kết nối.',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.amber[200] : Colors.amber[900],
+                                color: isDark
+                                    ? Colors.amber[200]
+                                    : Colors.amber[900],
                               ),
                             ),
                           ),
@@ -157,7 +196,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Vui lòng nhập email';
+                      }
                       if (!v.contains('@')) return 'Email không hợp lệ';
                       return null;
                     },
@@ -177,12 +218,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
+                      if (v == null || v.isEmpty) {
+                        return 'Vui lòng nhập mật khẩu';
+                      }
                       if (v.length < 6) return 'Mật khẩu từ 6 ký tự trở lên';
                       return null;
                     },
@@ -225,7 +269,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     children: [
                       Expanded(
                         child: Divider(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
                         ),
                       ),
                       Padding(
@@ -242,7 +288,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       Expanded(
                         child: Divider(
-                          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
                         ),
                       ),
                     ],
@@ -269,7 +317,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: BorderSide(
-                        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
                       ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -309,6 +359,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _continueOffline,
+                    icon: const Icon(Icons.cloud_off_rounded, size: 18),
+                    label: const Text('Dùng ngoại tuyến (không đồng bộ)'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -318,4 +379,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-

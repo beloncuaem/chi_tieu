@@ -14,6 +14,16 @@ class AppColors {
   static const Color surfaceDarkLight = Color(0xFF1E293B);
   static const Color borderDark = Color(0xFF334155);
 
+  // Locket-inspired glass surfaces
+  static const Color feedBackground = Color(0xFF05070C);
+  static const Color glassSurfaceDark = Color(0xCC131B2C);
+  static const Color glassSurfaceLight = Color(0xE6FFFFFF);
+  static const Color glassBorderDark = Color(0x1FFFFFFF);
+  static const Color glassBorderLight = Color(0x14000000);
+  static const Color accentCyan = Color(0xFF22D3EE);
+  static const Color accentAmber = Color(0xFFFBBF24);
+  static const Color accentRose = Color(0xFFFB7185);
+
   // Backgrounds & Surfaces (Light Mode)
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color surfaceLight = Color(0xFFFFFFFF);
@@ -30,7 +40,9 @@ class AppColors {
   static const Color priority0 = Color(0xFF10B981); // P0: Thiết yếu (Emerald)
   static const Color priority1 = Color(0xFF3B82F6); // P1: Cao (Blue)
   static const Color priority2 = Color(0xFFF59E0B); // P2: Trung bình (Amber)
-  static const Color priority3 = Color(0xFFEF4444); // P3: Thấp/Lãng phí (Rose Red)
+  static const Color priority3 = Color(
+    0xFFEF4444,
+  ); // P3: Thấp/Lãng phí (Rose Red)
 
   // Backward-compatible aliases
   static const Color priorityEssential = priority0;
@@ -49,29 +61,49 @@ class AppColors {
   static const LinearGradient cardGradientDark = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF1E293B),
-      Color(0xFF0F172A),
-    ],
+    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
   );
 
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF10B981),
-      Color(0xFF059669),
-    ],
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
   );
 
   static const LinearGradient balanceCardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      Color(0xFF1E293B),
-      Color(0xFF0D1526),
-      Color(0xFF064E3B),
-    ],
+    colors: [Color(0xFF1E293B), Color(0xFF0D1526), Color(0xFF064E3B)],
+  );
+
+  static const LinearGradient pageGradientDark = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF0B0F19), Color(0xFF0E1624), Color(0xFF071C18)],
+  );
+
+  static const LinearGradient pageGradientLight = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF8FAFC), Color(0xFFF1F5F9), Color(0xFFECFDF5)],
+  );
+
+  static const LinearGradient feedTopGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xB3000000), Color(0x00000000)],
+  );
+
+  static const LinearGradient feedBottomGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0x00000000), Color(0x99000000), Color(0xF2000000)],
+  );
+
+  static const LinearGradient captureButtonGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF34D399), Color(0xFF059669)],
   );
 
   static Color getPriorityColor(int priority) {

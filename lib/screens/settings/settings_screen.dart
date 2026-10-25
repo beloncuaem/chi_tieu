@@ -24,7 +24,9 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Đã đồng bộ thành công $count khoản chi lên Supabase!'),
+            content: Text(
+              'Đã đồng bộ thành công $count khoản chi lên Supabase!',
+            ),
             backgroundColor: AppColors.primary,
           ),
         );
@@ -122,7 +124,9 @@ class SettingsScreen extends ConsumerWidget {
                       color: AppColors.primary,
                     ),
                     title: const Text('Đồng bộ dữ liệu cục bộ lên Cloud'),
-                    subtitle: const Text('Đẩy các khoản chi từ máy lên Supabase'),
+                    subtitle: const Text(
+                      'Đẩy các khoản chi từ máy lên Supabase',
+                    ),
                     trailing: const Icon(Icons.arrow_forward_rounded),
                     onTap: () => _handleSync(context),
                   ),
@@ -211,7 +215,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 30),
           const Center(
             child: Text(
-              'Phiên bản 2.0.0 • Fintech Cloud',
+              'Phiên bản 2.1.0 • Locket Journal',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ),

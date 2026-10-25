@@ -16,13 +16,16 @@ import '../../providers/category_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../providers/priority_provider.dart';
 import '../../widgets/category_icon_badge.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/hamburger_button.dart';
 import '../../widgets/priority_badge.dart';
+import '../../widgets/screen_background.dart';
 import '../camera/expense_form_sheet.dart';
-import '../settings/settings_screen.dart';
-import '../trash/trash_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onMenuTap;
+
+  const HomeScreen({super.key, this.onMenuTap});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -42,7 +45,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchController.clear();
     setState(() => _filter = const _ExpenseFilter());
     await ref.read(expenseProvider.notifier).refreshDashboard();
-    await ref.read(budgetProvider.notifier).refreshCurrentMonthAfterExpenseChange();
+    await ref
+        .read(budgetProvider.notifier)
+        .refreshCurrentMonthAfterExpenseChange();
   }
 
   Future<void> _applySearch() async {
@@ -53,7 +58,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _loadFilteredExpenses() {
     final range = _filter.dateRange;
-    return ref.read(expenseProvider.notifier).loadExpenses(
+    return ref
+        .read(expenseProvider.notifier)
+        .loadExpenses(
           from: range?.start,
           to: range == null
               ? null
@@ -128,11 +135,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final userEmail = authState.user?.email;
-    final displayName = authState.user?.userMetadata?['full_name'] as String? ??
+    final displayName =
+        authState.user?.userMetadata?['full_name'] as String? ??
         (userEmail != null ? userEmail.split('@').first : 'Bạn');
 
     return Scaffold(
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: HamburgerButton(onTap: widget.onMenuTap),
+        ),
+        leadingWidth: 64,
         title: Row(
           children: [
             Container(
@@ -195,173 +208,146 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Thùng rác',
-            icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TrashScreen()),
-              );
-              _refresh();
-            },
-          ),
-          IconButton(
-            tooltip: 'Cài đặt',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          children: [
-            // Neo-Bank Balance & Summary Card
-            _SummaryCards(
-              today: expenseState.todayTotal,
-              week: expenseState.weekTotal,
-              month: expenseState.monthTotal,
-            ),
-            const SizedBox(height: 14),
+        child: ScreenBackground(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              // Neo-Bank Balance & Summary Card
+              _SummaryCards(
+                today: expenseState.todayTotal,
+                week: expenseState.weekTotal,
+                month: expenseState.monthTotal,
+              ),
+              const SizedBox(height: 14),
 
-            // Budget Progress Card
-            _BudgetProgressCard(budgetState: budgetState),
-            const SizedBox(height: 18),
+              // Budget Progress Card
+              _BudgetProgressCard(budgetState: budgetState),
+              const SizedBox(height: 18),
 
-            // Search & Filter Bar
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _applySearch(),
-                    decoration: InputDecoration(
-                      hintText: 'Tìm ghi chú, danh mục...',
-                      prefixIcon: const Icon(
-                        Icons.search_rounded,
-                        size: 20,
-                      ),
-                      suffixIcon: IconButton(
-                        tooltip: 'Tìm kiếm',
-                        icon: const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 18,
+              // Search & Filter Bar
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _applySearch(),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm ghi chú, danh mục...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        suffixIcon: IconButton(
+                          tooltip: 'Tìm kiếm',
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                          onPressed: _applySearch,
                         ),
-                        onPressed: _applySearch,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                IconButton.filledTonal(
-                  tooltip: 'Lọc giao dịch',
-                  onPressed: _showFilters,
-                  style: IconButton.styleFrom(
-                    padding: const EdgeInsets.all(12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  const SizedBox(width: 10),
+                  IconButton.filledTonal(
+                    tooltip: 'Lọc giao dịch',
+                    onPressed: _showFilters,
+                    style: IconButton.styleFrom(
+                      padding: const EdgeInsets.all(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: Badge(
+                      isLabelVisible: _filter.isActive,
+                      label: const Text(''),
+                      child: const Icon(Icons.tune_rounded, size: 22),
                     ),
                   ),
-                  icon: Badge(
-                    isLabelVisible: _filter.isActive,
-                    label: const Text(''),
-                    child: const Icon(
-                      Icons.tune_rounded,
-                      size: 22,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                ],
+              ),
+              const SizedBox(height: 20),
 
-            // Header Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+              // Header Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _filter.isActive ? 'Kết quả lọc' : 'Giao dịch gần đây',
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  if (_filter.isActive)
+                    GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        setState(() => _filter = const _ExpenseFilter());
+                        _loadFilteredExpenses();
+                      },
+                      child: const Text(
+                        'Xóa lọc',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (expenseState.errorMessage != null) ...[
+                const SizedBox(height: 8),
                 Text(
-                  _filter.isActive ? 'Kết quả lọc' : 'Giao dịch gần đây',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                  expenseState.errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-                if (_filter.isActive)
-                  GestureDetector(
-                    onTap: () {
-                      _searchController.clear();
-                      setState(() => _filter = const _ExpenseFilter());
-                      _loadFilteredExpenses();
-                    },
-                    child: const Text(
-                      'Xóa lọc',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+              ],
+              const SizedBox(height: 8),
+              if (expenseState.isLoading && expenseState.expenses.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 48),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (expenseState.expenses.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDark
+                                ? AppColors.surfaceDarkLight
+                                : AppColors.surfaceLightDark,
+                          ),
+                          child: const Icon(
+                            Icons.receipt_long_rounded,
+                            size: 36,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Chưa có khoản chi phù hợp.\nHãy chụp hoặc chọn một ảnh để bắt đầu.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
                   ),
-              ],
-            ),
-            if (expenseState.errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                expenseState.errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-            const SizedBox(height: 8),
-            if (expenseState.isLoading && expenseState.expenses.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 48),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (expenseState.expenses.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 48),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark
-                              ? AppColors.surfaceDarkLight
-                              : AppColors.surfaceLightDark,
-                        ),
-                        child: const Icon(
-                          Icons.receipt_long_rounded,
-                          size: 36,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Chưa có khoản chi phù hợp.\nHãy chụp hoặc chọn một ảnh để bắt đầu.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                )
+              else
+                ..._buildGroupedExpenses(
+                  context,
+                  expenseState.expenses,
+                  categories,
+                  priorities,
                 ),
-              )
-            else
-              ..._buildGroupedExpenses(
-                context,
-                expenseState.expenses,
-                categories,
-                priorities,
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -373,8 +359,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     List<Category> categories,
     List<PriorityLevel> priorities,
   ) {
-    final categoryMap = {for (final category in categories) category.id: category};
-    final priorityMap = {for (final priority in priorities) priority.id: priority};
+    final categoryMap = {
+      for (final category in categories) category.id: category,
+    };
+    final priorityMap = {
+      for (final priority in priorities) priority.id: priority,
+    };
     final groups = <DateTime, List<Expense>>{};
     for (final expense in expenses) {
       final date = DateUtils.dateOnly(expense.createdAt);
@@ -383,16 +373,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final result = <Widget>[];
     for (final entry in groups.entries) {
-      result.add(Padding(
-        padding: const EdgeInsets.only(top: 14, bottom: 6),
-        child: Text(
-          DateFormatter.formatDate(entry.key),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
+      result.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 6),
+          child: Text(
+            DateFormatter.formatDate(entry.key),
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey),
+          ),
         ),
-      ));
+      );
       for (final expense in entry.value) {
         result.add(
           _ExpenseTile(
@@ -446,7 +436,7 @@ class _SummaryCards extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18),
+            color: Colors.black.withValues(alpha: 0.18),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -478,12 +468,15 @@ class _SummaryCards extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.4),
+                    color: AppColors.primary.withValues(alpha: 0.4),
                     width: 0.8,
                   ),
                 ),
@@ -512,7 +505,7 @@ class _SummaryCards extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: Colors.white.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -523,7 +516,10 @@ class _SummaryCards extends StatelessWidget {
                     children: [
                       const Text(
                         'Hôm nay',
-                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                        style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Text(
@@ -540,7 +536,7 @@ class _SummaryCards extends StatelessWidget {
                 Container(
                   width: 1,
                   height: 24,
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                 ),
                 Expanded(
                   child: Padding(
@@ -550,7 +546,10 @@ class _SummaryCards extends StatelessWidget {
                       children: [
                         const Text(
                           'Tuần này',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 11,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -586,91 +585,81 @@ class _BudgetProgressCard extends StatelessWidget {
     final isOver = budgetState.budgetUsagePercent >= 1;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.track_changes_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Ngân sách tháng',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (isOver ? AppColors.priority3 : AppColors.primary)
-                        .withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${(budgetState.budgetUsagePercent * 100).toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      color: isOver ? AppColors.priority3 : AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: isDark
-                    ? AppColors.surfaceDarkLight
-                    : AppColors.surfaceLightDark,
-                color: isOver ? AppColors.priority3 : AppColors.primary,
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.track_changes_rounded,
+                color: AppColors.primary,
+                size: 20,
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Đã chi: ${CurrencyFormatter.format(budgetState.totalSpent)}',
+              const SizedBox(width: 8),
+              Text(
+                'Ngân sách tháng',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (isOver ? AppColors.priority3 : AppColors.primary)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${(budgetState.budgetUsagePercent * 100).toStringAsFixed(0)}%',
                   style: TextStyle(
+                    color: isOver ? AppColors.priority3 : AppColors.primary,
+                    fontWeight: FontWeight.bold,
                     fontSize: 12,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
                   ),
                 ),
-                Text(
-                  'Hạn mức: ${CurrencyFormatter.format(total)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: isDark
+                  ? AppColors.surfaceDarkLight
+                  : AppColors.surfaceLightDark,
+              color: isOver ? AppColors.priority3 : AppColors.primary,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Đã chi: ${CurrencyFormatter.format(budgetState.totalSpent)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
+              ),
+              Text(
+                'Hạn mức: ${CurrencyFormatter.format(total)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -709,10 +698,7 @@ class _ExpenseTile extends StatelessWidget {
           color: AppColors.priority3,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(
-          Icons.delete_outline_rounded,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
@@ -725,7 +711,10 @@ class _ExpenseTile extends StatelessWidget {
         ),
         child: ListTile(
           onTap: onTap,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 6,
+          ),
           leading: GestureDetector(
             onTap: onImageTap,
             child: ClipRRect(
@@ -758,8 +747,7 @@ class _ExpenseTile extends StatelessWidget {
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
-                if (priority != null)
-                  PriorityBadge(priority: expense.priority),
+                if (priority != null) PriorityBadge(priority: expense.priority),
                 Text(
                   DateFormatter.formatTime(expense.createdAt),
                   style: const TextStyle(fontSize: 11, color: Colors.grey),
@@ -770,7 +758,9 @@ class _ExpenseTile extends StatelessWidget {
           trailing: Text(
             CurrencyFormatter.format(expense.amount),
             style: TextStyle(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
               fontWeight: FontWeight.bold,
               fontSize: 15,
             ),
@@ -851,15 +841,14 @@ class _ExpenseFilter {
     bool clearPriority = false,
     bool clearMinAmount = false,
     bool clearMaxAmount = false,
-  }) =>
-      _ExpenseFilter(
-        search: search ?? this.search,
-        dateRange: clearDateRange ? null : dateRange ?? this.dateRange,
-        categoryId: clearCategory ? null : categoryId ?? this.categoryId,
-        priorityId: clearPriority ? null : priorityId ?? this.priorityId,
-        minAmount: clearMinAmount ? null : minAmount ?? this.minAmount,
-        maxAmount: clearMaxAmount ? null : maxAmount ?? this.maxAmount,
-      );
+  }) => _ExpenseFilter(
+    search: search ?? this.search,
+    dateRange: clearDateRange ? null : dateRange ?? this.dateRange,
+    categoryId: clearCategory ? null : categoryId ?? this.categoryId,
+    priorityId: clearPriority ? null : priorityId ?? this.priorityId,
+    minAmount: clearMinAmount ? null : minAmount ?? this.minAmount,
+    maxAmount: clearMaxAmount ? null : maxAmount ?? this.maxAmount,
+  );
 }
 
 class _FilterSheet extends StatefulWidget {
@@ -891,9 +880,11 @@ class _FilterSheetState extends State<_FilterSheet> {
     _categoryId = widget.initial.categoryId;
     _priorityId = widget.initial.priorityId;
     _minController = TextEditingController(
-        text: widget.initial.minAmount?.toInt().toString() ?? '');
+      text: widget.initial.minAmount?.toInt().toString() ?? '',
+    );
     _maxController = TextEditingController(
-        text: widget.initial.maxAmount?.toInt().toString() ?? '');
+      text: widget.initial.maxAmount?.toInt().toString() ?? '',
+    );
   }
 
   @override
@@ -917,7 +908,9 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         top: false,
         child: Padding(
@@ -927,7 +920,10 @@ class _FilterSheetState extends State<_FilterSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Lọc giao dịch', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Lọc giao dịch',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _pickDateRange,
@@ -958,14 +954,18 @@ class _FilterSheetState extends State<_FilterSheet> {
                       (category) => ChoiceChip(
                         label: Text('${category.icon} ${category.name}'),
                         selected: _categoryId == category.id,
-                        onSelected: (selected) =>
-                            setState(() => _categoryId = selected ? category.id : null),
+                        onSelected: (selected) => setState(
+                          () => _categoryId = selected ? category.id : null,
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text('Mức độ cần thiết', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Mức độ cần thiết',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 Wrap(
                   spacing: 8,
                   children: [
@@ -978,8 +978,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                       (priority) => ChoiceChip(
                         label: Text(priority.name),
                         selected: _priorityId == priority.id,
-                        onSelected: (selected) =>
-                            setState(() => _priorityId = selected ? priority.id : null),
+                        onSelected: (selected) => setState(
+                          () => _priorityId = selected ? priority.id : null,
+                        ),
                       ),
                     ),
                   ],
@@ -1014,7 +1015,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                 Row(
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context, const _ExpenseFilter()),
+                      onPressed: () =>
+                          Navigator.pop(context, const _ExpenseFilter()),
                       child: const Text('Xóa bộ lọc'),
                     ),
                     const Spacer(),

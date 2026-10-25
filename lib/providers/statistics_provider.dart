@@ -97,7 +97,8 @@ class StatisticsNotifier extends StateNotifier<StatisticsState> {
   Future<void> refreshStatistics() async {
     final now = DateTime.now();
     final from = _lastFrom ?? DateTime(now.year, now.month, 1);
-    final to = _lastTo ?? DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+    final to =
+        _lastTo ?? DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
     await loadStatistics(from, to);
   }
 

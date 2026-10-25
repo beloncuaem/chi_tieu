@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sb;
+
 import '../data/repositories/auth_repository.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading, error }
@@ -42,13 +44,15 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
   StreamSubscription<sb.AuthState>? _authSubscription;
 
   AuthNotifier(this._repo)
-      : super(AppAuthState(
+    : super(
+        AppAuthState(
           isConfigured: _repo.isConfigured,
           user: _repo.currentUser,
           status: _repo.currentUser != null
               ? AuthStatus.authenticated
               : AuthStatus.unauthenticated,
-        )) {
+        ),
+      ) {
     _listenAuth();
   }
 
@@ -127,10 +131,22 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
   Future<bool> signInWithGoogle() async {
     try {
       state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
-      return await _repo.signInWithGoogle();
+      final launched = await _repo.signInWithGoogle();
+      if (state.status == AuthStatus.loading) {
+        // OAuth hoàn tất trong trình duyệt; trả UI về trạng thái cũ để nút
+        // đăng nhập không bị kẹt spinner khi người dùng quay lại app.
+        state = state.copyWith(
+          status: state.user != null
+              ? AuthStatus.authenticated
+              : AuthStatus.unauthenticated,
+        );
+      }
+      return launched;
     } catch (e) {
       state = state.copyWith(
-        status: AuthStatus.error,
+        status: state.user != null
+            ? AuthStatus.authenticated
+            : AuthStatus.unauthenticated,
         errorMessage: _humanReadableError(e.toString()),
       );
       return false;
@@ -139,10 +155,7 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
 
   Future<void> signOut() async {
     await _repo.signOut();
-    state = state.copyWith(
-      status: AuthStatus.unauthenticated,
-      user: null,
-    );
+    state = state.copyWith(status: AuthStatus.unauthenticated, user: null);
   }
 
   String _humanReadableError(String raw) {
@@ -158,6 +171,20 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
     if (raw.contains('Supabase chưa được cấu hình')) {
       return 'Chưa cấu hình Supabase. Vui lòng thêm URL và Anon Key vào file .env.';
     }
+    if (raw.contains('provider is not enabled')) {
+      return 'Google chưa được bật trong Supabase. Hãy bật Google provider trong Authentication > Providers.';
+    }
+    if (raw.contains('redirect_uri') || raw.contains('redirect_to')) {
+      return 'URL chuyển hướng chưa được cho phép trong Supabase. Thêm io.supabase.chitieu://login-callback/ vào Redirect URLs.';
+    }
+    if (raw.contains('canceled') || raw.contains('cancelled')) {
+      return 'Bạn đã hủy đăng nhập Google.';
+    }
+    if (raw.contains('SocketException') ||
+        raw.contains('Failed host lookup') ||
+        raw.contains('network')) {
+      return 'Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.';
+    }
     return raw.replaceAll('Exception: ', '').replaceAll('AuthException: ', '');
   }
 
@@ -172,4 +199,3 @@ final authProvider = StateNotifierProvider<AuthNotifier, AppAuthState>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return AuthNotifier(repo);
 });
-

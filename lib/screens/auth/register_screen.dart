@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 
@@ -29,7 +30,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-    final success = await ref.read(authProvider.notifier).signUpWithEmail(
+    final success = await ref
+        .read(authProvider.notifier)
+        .signUpWithEmail(
           _emailController.text,
           _passwordController.text,
           fullName: _nameController.text.trim(),
@@ -74,11 +77,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Text(
                     'Tạo tài khoản mới',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -100,7 +103,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       prefixIcon: Icon(Icons.person_outline_rounded),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Vui lòng nhập họ tên';
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Vui lòng nhập họ tên';
+                      }
                       return null;
                     },
                   ),
@@ -115,7 +120,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Vui lòng nhập email';
+                      }
                       if (!v.contains('@')) return 'Email không hợp lệ';
                       return null;
                     },
@@ -135,12 +142,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
+                      if (v == null || v.isEmpty) {
+                        return 'Vui lòng nhập mật khẩu';
+                      }
                       if (v.length < 6) return 'Mật khẩu từ 6 ký tự trở lên';
                       return null;
                     },
@@ -202,4 +212,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-

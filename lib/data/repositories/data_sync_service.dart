@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../core/config/supabase_config.dart';
 import '../database/database_helper.dart';
 import 'supabase_storage_service.dart';
@@ -23,13 +24,17 @@ class DataSyncService {
     for (final cat in localCats) {
       final oldId = cat['id'] as int;
       try {
-        final inserted = await client.from('categories').insert({
-          'user_id': user.id,
-          'name': cat['name'],
-          'icon': cat['icon'],
-          'color_hex': '#10B981',
-          'is_default': false,
-        }).select().single();
+        final inserted = await client
+            .from('categories')
+            .insert({
+              'user_id': user.id,
+              'name': cat['name'],
+              'icon': cat['icon'],
+              'color_hex': '#10B981',
+              'is_default': false,
+            })
+            .select()
+            .single();
         categoryIdMap[oldId] = inserted['id'] as int;
       } catch (e) {
         debugPrint('Category sync warning: $e');
@@ -37,7 +42,10 @@ class DataSyncService {
     }
 
     // 2. Sync expenses
-    final localExpenses = await db.query('expenses', where: 'deleted_at IS NULL');
+    final localExpenses = await db.query(
+      'expenses',
+      where: 'deleted_at IS NULL',
+    );
     for (final exp in localExpenses) {
       try {
         final localImg = exp['image_path'] as String?;
@@ -69,7 +77,9 @@ class DataSyncService {
     for (final b in localBudgets) {
       try {
         final oldCatId = b['category_id'] as int?;
-        final targetCatId = oldCatId != null ? (categoryIdMap[oldCatId] ?? oldCatId) : null;
+        final targetCatId = oldCatId != null
+            ? (categoryIdMap[oldCatId] ?? oldCatId)
+            : null;
 
         await client.from('budgets').upsert({
           'user_id': user.id,
@@ -85,4 +95,3 @@ class DataSyncService {
     return syncedCount;
   }
 }
-

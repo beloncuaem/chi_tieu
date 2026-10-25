@@ -5,11 +5,16 @@ import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../data/models/category.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/hamburger_button.dart';
+import '../../widgets/screen_background.dart';
 
 import 'package:intl/intl.dart';
 
 class BudgetScreen extends ConsumerStatefulWidget {
-  const BudgetScreen({super.key});
+  final VoidCallback? onMenuTap;
+
+  const BudgetScreen({super.key, this.onMenuTap});
 
   @override
   ConsumerState<BudgetScreen> createState() => _BudgetScreenState();
@@ -64,10 +69,9 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
         final total =
             double.tryParse(_totalBudgetController.text.replaceAll(',', '')) ??
             0.0;
-        await ref.read(budgetProvider.notifier).setTotalBudget(
-          month: currentMonth,
-          amount: total,
-        );
+        await ref
+            .read(budgetProvider.notifier)
+            .setTotalBudget(month: currentMonth, amount: total);
       } else {
         final Map<int, double> catBudgets = {};
         _categoryControllers.forEach((id, controller) {
@@ -76,10 +80,12 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
             catBudgets[id] = val;
           }
         });
-        await ref.read(budgetProvider.notifier).setCategoryBudgets(
-          month: currentMonth,
-          categoryBudgets: catBudgets,
-        );
+        await ref
+            .read(budgetProvider.notifier)
+            .setCategoryBudgets(
+              month: currentMonth,
+              categoryBudgets: catBudgets,
+            );
       }
 
       if (mounted) {
@@ -88,11 +94,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final message =
-            e is BudgetValidationException ? e.message : 'Lỗi khi lưu ngân sách';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        final message = e is BudgetValidationException
+            ? e.message
+            : 'Lỗi khi lưu ngân sách';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       }
     }
   }
@@ -103,13 +109,16 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       if (previous?.isLoading == true && !next.isLoading) {
         if (next.totalBudget != null && next.totalBudget!.amount > 0) {
           if (_totalBudgetController.text.isEmpty) {
-            _totalBudgetController.text =
-                next.totalBudget!.amount.toInt().toString();
+            _totalBudgetController.text = next.totalBudget!.amount
+                .toInt()
+                .toString();
           }
         }
         for (var entry in next.categoryBudgets.entries) {
           final controller = _categoryControllers[entry.key];
-          if (controller != null && controller.text.isEmpty && entry.value > 0) {
+          if (controller != null &&
+              controller.text.isEmpty &&
+              entry.value > 0) {
             controller.text = entry.value.toInt().toString();
           }
         }
@@ -121,49 +130,61 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final currentMonth = DateFormat('MM/yyyy').format(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: Text('Ngân sách tháng $currentMonth')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Tổng')),
-                ButtonSegment(value: false, label: Text('Chia theo danh mục')),
-              ],
-              selected: {_isTotalBudget},
-              onSelectionChanged: (set) {
-                setState(() => _isTotalBudget = set.first);
-              },
-            ),
-          ),
-          Expanded(
-            child: _isTotalBudget
-                ? _buildTotalBudgetView(budgetState)
-                : _buildCategoryBudgetView(
-                    categoryState.categories,
-                    budgetState,
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: HamburgerButton(onTap: widget.onMenuTap),
+        ),
+        leadingWidth: 64,
+        title: Text('Ngân sách tháng $currentMonth'),
+      ),
+      body: ScreenBackground(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Tổng')),
+                  ButtonSegment(
+                    value: false,
+                    label: Text('Chia theo danh mục'),
                   ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saveBudget,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  'Lưu ngân sách',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ],
+                selected: {_isTotalBudget},
+                onSelectionChanged: (set) {
+                  setState(() => _isTotalBudget = set.first);
+                },
+              ),
+            ),
+            Expanded(
+              child: _isTotalBudget
+                  ? _buildTotalBudgetView(budgetState)
+                  : _buildCategoryBudgetView(
+                      categoryState.categories,
+                      budgetState,
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saveBudget,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Lưu ngân sách',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -196,34 +217,41 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          if (budget > 0) ...[
-            LinearProgressIndicator(
-              value: percent,
-              color: progressColor,
-              backgroundColor: Colors.grey.shade200,
-              minHeight: 12,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Đã tiêu: ${CurrencyFormatter.format(spent)}'),
-                Text('${(percent * 100).toStringAsFixed(1)}%'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Còn lại: ${CurrencyFormatter.format(budget - spent)}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: (budget - spent) < 0
-                    ? Colors.red
-                    : Colors.green.shade700,
+          if (budget > 0)
+            GlassCard(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LinearProgressIndicator(
+                    value: percent,
+                    color: progressColor,
+                    backgroundColor: Colors.grey.shade200,
+                    minHeight: 12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Đã tiêu: ${CurrencyFormatter.format(spent)}'),
+                      Text('${(percent * 100).toStringAsFixed(1)}%'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Còn lại: ${CurrencyFormatter.format(budget - spent)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: (budget - spent) < 0
+                          ? Colors.red
+                          : Colors.green.shade700,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
         ],
       ),
     );
@@ -262,61 +290,60 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
           progressColor = Colors.orange;
         }
 
-        return Card(
+        return GlassCard(
           margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              children: [
+          padding: const EdgeInsets.all(14),
+          borderRadius: 22,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Text(cat.icon, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      cat.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _categoryControllers[cat.id!],
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Ngân sách',
+                  suffixText: '₫',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (budget > 0) ...[
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: percent,
+                  color: progressColor,
+                  backgroundColor: Colors.grey.shade200,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                const SizedBox(height: 4),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(cat.icon, style: const TextStyle(fontSize: 24)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        cat.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
+                    Text(
+                      'Đã tiêu: ${CurrencyFormatter.format(spent)}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    Text(
+                      '${(percent * 100).toStringAsFixed(1)}%',
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _categoryControllers[cat.id!],
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Ngân sách',
-                    suffixText: '₫',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                if (budget > 0) ...[
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(
-                    value: percent,
-                    color: progressColor,
-                    backgroundColor: Colors.grey.shade200,
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Đã tiêu: ${CurrencyFormatter.format(spent)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      Text(
-                        '${(percent * 100).toStringAsFixed(1)}%',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         );
       },
