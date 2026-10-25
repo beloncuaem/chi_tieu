@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../providers/statistics_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/icon_helper.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/hamburger_button.dart';
@@ -61,20 +62,22 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 
   void _setRange(String range) {
     final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
     setState(() {
       _selectedRange = range;
       if (range == 'Hôm nay') {
-        _startDate = DateTime(now.year, now.month, now.day);
-        _endDate = now;
+        _startDate = startOfToday;
+        _endDate = endOfToday;
       } else if (range == 'Tuần này') {
-        _startDate = now.subtract(Duration(days: now.weekday - 1));
-        _endDate = now;
+        _startDate = startOfToday.subtract(Duration(days: now.weekday - 1));
+        _endDate = endOfToday;
       } else if (range == 'Tháng này') {
         _startDate = DateTime(now.year, now.month, 1);
-        _endDate = now;
+        _endDate = endOfToday;
       } else if (range == 'Năm nay') {
         _startDate = DateTime(now.year, 1, 1);
-        _endDate = now;
+        _endDate = endOfToday;
       }
     });
     if (range != 'Tùy chọn') _loadData();
@@ -84,6 +87,9 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   Widget build(BuildContext context) {
     final statsState = ref.watch(statisticsProvider);
     final categoryState = ref.watch(categoryProvider);
+    final categoriesById = {
+      for (final category in categoryState.categories) category.id: category,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -247,15 +253,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                                     (entry.value /
                                     statsState.totalSpending *
                                     100);
-                                final cat = categoryState.categories
-                                    .cast()
-                                    .firstWhere(
-                                      (c) => c.id == entry.key,
-                                      orElse: () => null,
-                                    );
-                                final catName = cat != null
-                                    ? '${cat.icon} ${cat.name}'
-                                    : 'Danh mục #${entry.key}';
+                                final cat = categoriesById[entry.key];
 
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -274,7 +272,19 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Expanded(child: Text(catName)),
+                                      IconHelper.getIconWidget(
+                                        cat?.icon ?? 'dotsThreeOutline',
+                                        size: 16,
+                                        color: colors[index % colors.length],
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          cat?.name ?? 'Danh mục #${entry.key}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                       Text(
                                         '${CurrencyFormatter.format(entry.value)} (${percent.toStringAsFixed(1)}%)',
                                       ),

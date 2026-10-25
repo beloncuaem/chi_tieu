@@ -1,30 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/icon_helper.dart';
 import '../../data/models/category.dart';
 import '../../providers/category_provider.dart';
 
 class ManageCategoriesScreen extends ConsumerWidget {
   const ManageCategoriesScreen({super.key});
-
-  static const _emojis = [
-    '🛒',
-    '🍜',
-    '☕',
-    '🚗',
-    '🏠',
-    '💊',
-    '🎓',
-    '🎮',
-    '💡',
-    '👕',
-    '🎁',
-    '🎬',
-    '⚽',
-    '✈️',
-    '🐶',
-    '🏷️',
-  ];
 
   Future<void> _showCategoryDialog(
     BuildContext context,
@@ -32,7 +14,9 @@ class ManageCategoriesScreen extends ConsumerWidget {
     Category? category,
   }) async {
     final controller = TextEditingController(text: category?.name ?? '');
-    var selectedEmoji = category?.icon ?? _emojis.first;
+    var selectedIcon = IconHelper.normalizeIconKey(
+      category?.icon ?? 'dotsThreeOutline',
+    );
     final isEditing = category != null;
 
     await showDialog<void>(
@@ -50,19 +34,45 @@ class ManageCategoriesScreen extends ConsumerWidget {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _emojis
-                      .map(
-                        (emoji) => ChoiceChip(
-                          label: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 18),
+                  children: IconHelper.availableIcons.map((iconKey) {
+                    final isSelected = iconKey == selectedIcon;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () =>
+                          setDialogState(() => selectedIcon = iconKey),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.transparent,
+                            width: 1.6,
                           ),
-                          selected: emoji == selectedEmoji,
-                          onSelected: (_) =>
-                              setDialogState(() => selectedEmoji = emoji),
                         ),
-                      )
-                      .toList(),
+                        child: Center(
+                          child: IconHelper.getIconWidget(
+                            iconKey,
+                            size: 20,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -91,12 +101,12 @@ class ManageCategoriesScreen extends ConsumerWidget {
                   await ref
                       .read(categoryProvider.notifier)
                       .updateCategory(
-                        category.copyWith(name: name, icon: selectedEmoji),
+                        category.copyWith(name: name, icon: selectedIcon),
                       );
                 } else {
                   await ref
                       .read(categoryProvider.notifier)
-                      .addCategory(name, selectedEmoji);
+                      .addCategory(name, selectedIcon);
                 }
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
@@ -153,11 +163,29 @@ class ManageCategoriesScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final category = state.categories[index];
                 return ListTile(
-                  onTap: () =>
-                      _showCategoryDialog(context, ref, category: category),
-                  leading: Text(
-                    category.icon,
-                    style: const TextStyle(fontSize: 26),
+                  onTap: category.isDefault
+                      ? null
+                      : () => _showCategoryDialog(
+                          context,
+                          ref,
+                          category: category,
+                        ),
+                  leading: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: IconHelper.getIconWidget(
+                        category.icon,
+                        size: 22,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
                   ),
                   title: Text(category.name),
                   subtitle: Text(
@@ -167,7 +195,7 @@ class ManageCategoriesScreen extends ConsumerWidget {
                   ),
                   trailing: category.isDefault
                       ? const Tooltip(
-                          message: 'Danh mục mặc định không thể xóa',
+                          message: 'Danh mục mặc định không thể sửa hoặc xóa',
                           child: Icon(Icons.lock_outline),
                         )
                       : IconButton(

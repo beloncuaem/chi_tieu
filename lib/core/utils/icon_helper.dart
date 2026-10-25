@@ -49,6 +49,11 @@ class IconHelper {
 
   static List<String> get availableIcons => _iconRegistry.keys.toList();
 
+  static String normalizeIconKey(String iconKey) {
+    final mappedKey = _emojiToIconName[iconKey] ?? iconKey;
+    return _iconRegistry.containsKey(mappedKey) ? mappedKey : 'dotsThreeOutline';
+  }
+
   static Widget getIconWidget(
     String iconKey, {
     double size = 22,

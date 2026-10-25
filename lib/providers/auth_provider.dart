@@ -111,13 +111,23 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
         password: password,
         fullName: fullName,
       );
-      if (res.user != null) {
+      // Khi Supabase bật "Confirm email", signUp trả về user nhưng session
+      // vẫn null; chỉ coi là đăng nhập khi đã có session thật.
+      if (res.session != null && res.user != null) {
         state = state.copyWith(
           status: AuthStatus.authenticated,
           user: res.user,
         );
         return true;
       }
+      final pendingEmail = res.user?.email;
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        user: null,
+        errorMessage: pendingEmail != null
+            ? 'Tài khoản đã tạo. Kiểm tra email $pendingEmail, bấm link xác nhận rồi quay lại đăng nhập.'
+            : 'Đăng ký chưa hoàn tất. Vui lòng thử lại.',
+      );
       return false;
     } catch (e) {
       state = state.copyWith(
@@ -161,6 +171,12 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
   String _humanReadableError(String raw) {
     if (raw.contains('Invalid login credentials')) {
       return 'Email hoặc mật khẩu không chính xác.';
+    }
+    if (raw.contains('Email not confirmed')) {
+      return 'Email chưa được xác nhận. Mở hộp thư và bấm link xác nhận rồi đăng nhập lại.';
+    }
+    if (raw.contains('Email rate limit exceeded')) {
+      return 'Bạn thử quá nhiều lần. Vui lòng đợi vài phút rồi thử lại.';
     }
     if (raw.contains('User already registered')) {
       return 'Email này đã được đăng ký tài khoản.';

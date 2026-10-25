@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/expense.dart';
 import '../data/repositories/expense_repository.dart';
+import '../data/repositories/supabase_storage_service.dart';
 import 'budget_provider.dart';
 import 'statistics_provider.dart';
 
@@ -154,10 +155,14 @@ class ExpenseNotifier extends StateNotifier<ExpenseState> {
     if (expense.id == null) return;
     await _repository.permanentlyDeleteExpense(expense.id!);
     final imagePath = expense.imagePath;
-    if (imagePath != null && imagePath.isNotEmpty) {
-      final file = File(imagePath);
-      if (await file.exists()) await file.delete();
+    if (imagePath == null || imagePath.isEmpty) return;
+
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      await SupabaseStorageService().deleteReceiptImage(imagePath);
+      return;
     }
+    final file = File(imagePath);
+    if (await file.exists()) await file.delete();
   }
 
   Future<double> getTodayTotal() async {

@@ -5,7 +5,7 @@
 <h1 align="center">Chi Tiêu — Locket Expense Journal</h1>
 
 <p align="center">
-  <b>Nhật ký chi tiêu bằng ảnh kiểu Locket, giao diện Fintech hiện đại, đồng bộ Supabase (Auth, PostgreSQL RLS, Storage) và hoạt động ngoại tuyến với SQLite.</b>
+  <b>Nhật ký chi tiêu bằng ảnh kiểu Locket, giao diện Fintech hiện đại, lưu trực tiếp trên Supabase (Auth, PostgreSQL RLS, Storage) và bắt buộc đăng nhập.</b>
 </p>
 
 <p align="center">
@@ -13,8 +13,8 @@
   <img src="https://img.shields.io/badge/Dart-3.13+-0175C2?logo=dart&logoColor=white" alt="Dart" />
   <img src="https://img.shields.io/badge/Supabase-Cloud%20Database-3ECF8E?logo=supabase&logoColor=white" alt="Supabase" />
   <img src="https://img.shields.io/badge/State-Riverpod%202.6-blue" alt="Riverpod" />
-  <img src="https://img.shields.io/badge/Database-PostgreSQL%20%7C%20SQLite-4169E1" alt="PostgreSQL SQLite" />
-  <img src="https://img.shields.io/badge/Tests-69%20Passed%20(100%25)-success" alt="Tests" />
+  <img src="https://img.shields.io/badge/Database-PostgreSQL-4169E1" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Tests-66%20Passed%20(100%25)-success" alt="Tests" />
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License" />
 </p>
 
@@ -27,25 +27,26 @@ mở app là camera, chụp hóa đơn hoặc khoảnh khắc chi tiêu, rồi l
 từng khoản chi như một dòng thời gian. Điều hướng chính dùng nút **3 gạch** ở góc trên
 trái thay cho thanh tab đáy.
 
-Dữ liệu được ưu tiên lưu trên **Supabase** khi đã đăng nhập và tự động fallback về
-**SQLite** khi ngoại tuyến hoặc chưa cấu hình cloud.
+Toàn bộ khoản chi, danh mục, ngân sách và ảnh được lưu **trực tiếp trên Supabase**;
+không có bản sao dữ liệu tài chính trên thiết bị và không cần thao tác đồng bộ thủ công.
 
 ---
 
 ## 🚀 Tính năng nổi bật
 
 ### 1. 📸 Nhật ký ảnh kiểu Locket
-- Trang đầu tiên là **camera trực tiếp** với nút chụp, thư viện, đổi camera và nhập nhanh.
+- Trang đầu tiên là **camera trực tiếp** với nút chụp, thư viện và đổi camera.
 - Vuốt dọc để xem lần lượt các khoản chi có ảnh, **mới nhất trước**.
 - Ảnh toàn màn hình kèm danh mục, mức độ cần thiết, số tiền, ghi chú, ngày giờ.
-- Nút sửa/xóa dạng kính mờ; xóa có hoàn tác và chuyển vào thùng rác.
-- Ảnh cloud dùng `cached_network_image`; ảnh local hiển thị trực tiếp từ thiết bị.
+- Nút sửa/xóa dạng kính mờ; xóa chuyển vào thùng rác kèm hoàn tác trong 5 giây.
+- Ảnh cloud dùng `cached_network_image`; ảnh tạm trên máy được xóa sau khi lưu thành công.
+- Nút góc phải mở **xem ảnh dạng lưới**, chạm một ảnh để nhảy tới đúng khoảnh khắc trong feed.
 
 ### 2. ☰ Điều hướng bằng Drawer
 - Nút 3 gạch cố định ở góc trên trái của mọi màn hình chính.
 - Drawer gồm: hồ sơ người dùng, **Nhật ký ảnh**, **Tổng quan**, **Thống kê**, **Ngân sách**,
   quản lý danh mục, thùng rác, cài đặt và chuyển sáng/tối.
-- Hiển thị trạng thái **Cloud Sync** hoặc **Local / ngoại tuyến** ngay trong drawer.
+- Hiển thị trạng thái **Cloud Sync** ngay trong drawer.
 
 ### 3. 💎 Giao diện Fintech hiện đại
 - Tông **Deep Slate** kết hợp **Emerald Green**, phông **Be Vietnam Pro**.
@@ -56,19 +57,22 @@ Dữ liệu được ưu tiên lưu trên **Supabase** khi đã đăng nhập v�
 - Đăng nhập/đăng ký **Email & Mật khẩu**.
 - **Google OAuth** qua trình duyệt, quay lại app bằng deep link
   `io.supabase.chitieu://login-callback/`.
-- **Chế độ khách ngoại tuyến** không cần tài khoản.
+- Bắt buộc đăng nhập; không có chế độ khách hay ngoại tuyến.
 - Kiểm tra provider Google trước khi mở trình duyệt để báo lỗi rõ ràng thay vì trang JSON.
 
 ### 5. ☁️ Cloud-first & Bảo mật RLS
 - PostgreSQL + Row Level Security: mỗi người dùng chỉ thấy dữ liệu của mình.
 - Hồ sơ `profiles` tạo tự động bằng trigger khi đăng ký.
-- Ảnh hóa đơn nén client-side rồi upload lên bucket `expense-receipts`.
-- Đồng bộ dữ liệu local lên cloud bằng một nút trong Cài đặt.
+- Ảnh hóa đơn được upload tự động lên bucket `expense-receipts` khi lưu khoản chi.
+- Không lưu dữ liệu tài chính hay ảnh hóa đơn trên máy; ảnh tạm được dọn sau khi lưu.
+- Khi mất mạng hoặc upload thất bại, app báo lỗi và không lưu khoản chi.
 
 ### 6. 📊 Thống kê & Ngân sách
 - Biểu đồ tròn phân bổ theo danh mục, biểu đồ thanh theo mức độ cần thiết.
 - Thống kê hôm nay/tuần/tháng/năm hoặc khoảng ngày tùy chọn.
 - Ngân sách tổng hoặc theo danh mục, thanh tiến trình đổi màu theo hạn mức.
+- Vượt hạn mức hiển thị **"Quá ngân sách: X"**, không hiển thị số còn lại âm.
+- Cảnh báo một lần ở các mốc 80%, 90%, 100% ngân sách tháng.
 - Thùng rác cho phép khôi phục khoản chi đã xóa.
 
 ---
@@ -79,13 +83,13 @@ Dữ liệu được ưu tiên lưu trên **Supabase** khi đã đăng nhập v�
 | :--- | :--- | :--- |
 | **Framework** | Flutter (Dart 3.13+) | Ứng dụng đa nền tảng |
 | **State Management** | `flutter_riverpod` ^2.6.1 | StateNotifier, quản lý trạng thái |
-| **Backend & Cloud** | `supabase_flutter` ^2.8.3 | Auth, PostgreSQL RLS, Storage |
-| **Local Database** | `sqflite` ^2.4.2 | Lưu trữ ngoại tuyến |
+| **Cloud Database** | `supabase_flutter` ^2.8.3 | Auth, PostgreSQL RLS, Storage |
+| **Cài đặt cục bộ** | `sqflite` ^2.4.2 | Chỉ lưu tùy chọn onboarding và mức độ cần thiết |
 | **Giao diện** | `google_fonts`, Material 3 | Be Vietnam Pro, Light/Dark |
 | **Biểu đồ** | `fl_chart` ^0.70.2 | Donut và bar chart |
 | **Camera & Ảnh** | `camera`, `image_picker`, `cached_network_image` | Chụp, chọn, cache ảnh |
 | **Môi trường** | `flutter_dotenv` ^5.2.1 | Đọc `.env` |
-| **Kiểm thử** | `flutter_test` | 69 Unit & Widget tests |
+| **Kiểm thử** | `flutter_test` | 66 Unit & Widget tests |
 
 ---
 
@@ -97,7 +101,7 @@ chi_tieu/
 ├── docs/                      # Cấu trúc, yêu cầu, hướng dẫn OAuth
 ├── lib/
 │   ├── core/                  # config, constants, navigation, services, theme, utils
-│   ├── data/                  # models, database, repositories (Supabase + SQLite)
+│   ├── data/                  # models, repositories Supabase, storage
 │   ├── providers/             # Riverpod StateNotifier
 │   ├── screens/
 │   │   ├── main_screen.dart   # Scaffold + Drawer + 4 khu vực
@@ -175,25 +179,25 @@ File: `build/app/outputs/flutter-apk/app-release.apk`
 
 ```bash
 flutter analyze     # không có lỗi biên dịch
-flutter test        # 69/69 passed
+flutter test        # 66/66 passed
 ```
 
 - **Unit Tests**: model, formatter VND/ngày, trạng thái ngân sách/thống kê/auth,
   ánh xạ icon, sắp xếp feed ảnh.
 - **Widget Tests**: Login/Settings/Trash, ExpenseCard, PriorityBadge, CategoryChip,
-  AppDrawer (điều hướng, tiện ích, hồ sơ cloud/khách).
+  AppDrawer (điều hướng, tiện ích, hồ sơ cloud).
 
 ### Đã xác minh trên emulator Android API 35
 - Onboarding và cấp quyền camera/thông báo.
 - Đăng nhập email sai → Supabase trả `Invalid login credentials`
   → app hiển thị **"Email hoặc mật khẩu không chính xác."** (xác nhận kết nối backend).
-- Chế độ ngoại tuyến vào thẳng Locket feed.
 - Feed dọc, nút 3 gạch, drawer và 4 khu vực hiển thị đúng.
 - Google OAuth được chặn rõ ràng khi provider chưa bật (xem tài liệu troubleshooting).
-- **Bản release APK** cài trên emulator: offline mode được ghi nhớ sau khi khởi động lại,
-  trang ảnh Locket mở đúng, drawer chuyển trang hoạt động, icon status bar đổi theo nền sáng/tối,
-  Google preflight hiển thị thông báo tiếng Việt và đăng nhập email sai nhận lỗi
-  trực tiếp từ Supabase (APK kết nối backend bình thường).
+- **Bản release APK** cài trên emulator: trang ảnh Locket mở đúng, drawer chuyển trang hoạt động,
+  icon status bar đổi theo nền sáng/tối, Google preflight hiển thị thông báo tiếng Việt và
+  đăng nhập email sai nhận lỗi trực tiếp từ Supabase (APK kết nối backend bình thường).
+- Bản **debug APK** sau đợt sửa camera, ngân sách và nhật ký ảnh build thành công
+  (`build/app/outputs/flutter-apk/app-debug.apk`).
 
 ---
 

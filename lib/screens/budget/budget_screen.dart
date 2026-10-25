@@ -5,6 +5,7 @@ import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../data/models/category.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/icon_helper.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/hamburger_button.dart';
 import '../../widgets/screen_background.dart';
@@ -22,6 +23,7 @@ class BudgetScreen extends ConsumerStatefulWidget {
 
 class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   bool _isTotalBudget = true;
+  bool _isSavingBudget = false;
   final _totalBudgetController = TextEditingController();
   final Map<int, TextEditingController> _categoryControllers = {};
 
@@ -63,6 +65,8 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   }
 
   Future<void> _saveBudget() async {
+    if (_isSavingBudget) return;
+    setState(() => _isSavingBudget = true);
     final currentMonth = ref.read(budgetProvider).month;
     try {
       if (_isTotalBudget) {
@@ -100,6 +104,8 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(message)));
       }
+    } finally {
+      if (mounted) setState(() => _isSavingBudget = false);
     }
   }
 
@@ -170,16 +176,25 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveBudget,
+                  onPressed: _isSavingBudget ? null : _saveBudget,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Theme.of(context).primaryColor,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text(
-                    'Lưu ngân sách',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isSavingBudget
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Lưu ngân sách',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -192,7 +207,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
   Widget _buildTotalBudgetView(BudgetState budgetState) {
     final spent = budgetState.totalSpent;
     final budget = budgetState.totalBudget?.amount ?? 0.0;
-    final percent = budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0.0;
+    final rawPercent = budget > 0 ? spent / budget : 0.0;
+    final percent = rawPercent.clamp(0.0, 1.0);
+    final remaining = budget - spent;
+    final isOver = remaining < 0;
 
     Color progressColor = Colors.teal;
     if (percent >= 1.0) {
@@ -235,18 +253,18 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Đã tiêu: ${CurrencyFormatter.format(spent)}'),
-                      Text('${(percent * 100).toStringAsFixed(1)}%'),
+                      Text('${(rawPercent * 100).toStringAsFixed(1)}%'),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Còn lại: ${CurrencyFormatter.format(budget - spent)}',
+                    isOver
+                        ? 'Quá ngân sách: ${CurrencyFormatter.format(-remaining)}'
+                        : 'Còn lại: ${CurrencyFormatter.format(remaining)}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: (budget - spent) < 0
-                          ? Colors.red
-                          : Colors.green.shade700,
+                      color: isOver ? Colors.red : Colors.green.shade700,
                     ),
                   ),
                 ],
@@ -281,7 +299,10 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
         final budget = budgetState.categoryBudgets[cat.id!] ?? 0.0;
         final spent = budgetState.categorySpent[cat.id!] ?? 0.0;
-        final percent = budget > 0 ? (spent / budget).clamp(0.0, 1.0) : 0.0;
+        final rawPercent = budget > 0 ? spent / budget : 0.0;
+        final percent = rawPercent.clamp(0.0, 1.0);
+        final remaining = budget - spent;
+        final isOver = remaining < 0;
 
         Color progressColor = Colors.teal;
         if (percent >= 1.0) {
@@ -298,7 +319,11 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
             children: [
               Row(
                 children: [
-                  Text(cat.icon, style: const TextStyle(fontSize: 24)),
+                  IconHelper.getIconWidget(
+                    cat.icon,
+                    size: 24,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -337,10 +362,24 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
                       style: const TextStyle(fontSize: 12),
                     ),
                     Text(
-                      '${(percent * 100).toStringAsFixed(1)}%',
+                      '${(rawPercent * 100).toStringAsFixed(1)}%',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
+                ),
+                const SizedBox(height: 2),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    isOver
+                        ? 'Quá ngân sách: ${CurrencyFormatter.format(-remaining)}'
+                        : 'Còn lại: ${CurrencyFormatter.format(remaining)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isOver ? Colors.red : Colors.green.shade700,
+                    ),
+                  ),
                 ),
               ],
             ],

@@ -1,7 +1,7 @@
-# Cấu trúc dự án Chi Tiêu (v2.1 — Locket Journal)
+# Cấu trúc dự án Chi Tiêu (v2.2 — Locket Journal)
 
-> Cập nhật: 2026-10-26. Tài liệu phản ánh kiến trúc Cloud-first + SQLite fallback,
-> xác thực Supabase và giao diện nhật ký ảnh kiểu Locket.
+> Cập nhật: 2026-10-26. Tài liệu phản ánh kiến trúc Cloud-only (Supabase),
+> xác thực bắt buộc, giao diện nhật ký ảnh kiểu Locket và bản sửa lỗi ngân sách/thùng rác.
 
 ## 1. Cây thư mục
 
@@ -18,15 +18,17 @@ chi_tieu/
 │   │   ├── theme/app_theme.dart           # Light/Dark Material 3
 │   │   └── utils/                         # CurrencyFormatter, DateFormatter, IconHelper
 │   ├── data/
-│   │   ├── database/database_helper.dart  # Schema SQLite, danh mục mặc định
+│   │   ├── database/database_helper.dart  # SQLite: onboarding + mức độ cần thiết
 │   │   ├── models/                        # Expense, Category, Budget, PriorityLevel
 │   │   └── repositories/
 │   │       ├── auth_repository.dart       # Email/Google OAuth + preflight provider
-│   │       ├── expense_repository.dart    # Cloud-first, fallback SQLite
-│   │       ├── category_repository.dart
-│   │       ├── budget_repository.dart
-│   │       ├── supabase_storage_service.dart
-│   │       └── data_sync_service.dart     # Đồng bộ dữ liệu local → cloud
+│   │       ├── expense_repository.dart    # Chỉ Supabase, upload ảnh tự động
+│   │       ├── category_repository.dart   # Chỉ Supabase
+│   │       ├── budget_repository.dart     # Chỉ Supabase, chọn dòng ngân sách tổng mới nhất
+│   │       ├── budget_alert_repository.dart
+│   │       ├── app_settings_repository.dart # onboarding (SQLite)
+│   │       ├── priority_repository.dart   # mức độ cần thiết (SQLite)
+│   │       └── supabase_storage_service.dart
 │   ├── providers/                         # Riverpod StateNotifier
 │   │   ├── auth_provider.dart
 │   │   ├── expense_provider.dart
@@ -34,7 +36,7 @@ chi_tieu/
 │   │   ├── budget_provider.dart
 │   │   ├── statistics_provider.dart
 │   │   ├── priority_provider.dart
-│   │   ├── app_settings_provider.dart     # onboarding, theme, offlineMode
+│   │   ├── app_settings_provider.dart     # onboarding
 │   │   └── theme_provider.dart
 │   ├── screens/
 │   │   ├── main_screen.dart               # Scaffold + Drawer + AnimatedSwitcher 4 khu vực
@@ -43,13 +45,14 @@ chi_tieu/
 │   │   ├── camera/
 │   │   │   ├── camera_screen.dart          # Locket feed: PageView dọc, camera ở trang 0
 │   │   │   ├── feed_helpers.dart           # Lọc ảnh + sắp xếp mới nhất trước
+│   │   │   ├── feed_grid_screen.dart       # Xem ảnh dạng lưới, chọn để nhảy trong feed
 │   │   │   ├── feed_photo_page.dart        # Trang ảnh toàn màn hình
-│   │   │   └── expense_form_sheet.dart     # Nhập số tiền/danh mục/ưu tiên
+│   │   │   └── expense_form_sheet.dart     # Nhập số tiền/danh mục/ưu tiên, lưu cloud
 │   │   ├── home/                          # Dashboard tổng quan
 │   │   ├── statistics/                    # Bộ lọc, biểu đồ, nhận xét
 │   │   ├── budget/                        # Ngân sách tháng
 │   │   ├── categories/                    # Quản lý danh mục
-│   │   ├── settings/                      # Cài đặt, đồng bộ, theme
+│   │   ├── settings/                      # Cài đặt, trạng thái cloud, theme
 │   │   └── trash/                         # Thùng rác, khôi phục
 │   └── widgets/
 │       ├── app_drawer.dart                # Menu 3 gạch: hồ sơ + không gian + tiện ích
@@ -83,15 +86,16 @@ Riverpod StateNotifier
       ↓
 Repository
       ↓
-Supabase (nếu đã đăng nhập)  ──lỗi/mất mạng──►  SQLite (fallback)
+Supabase (bắt buộc đăng nhập)
       ↓
 PostgreSQL + RLS + Storage bucket `expense-receipts`
 ```
 
-- **Cloud-first**: repository thử ghi/đọc Supabase trước; mọi thao tác được bảo vệ bởi RLS theo `auth.uid()`.
-- **Offline fallback**: khi chưa đăng nhập, chưa cấu hình hoặc gọi cloud thất bại, repository dùng SQLite.
-- **Đồng bộ**: `DataSyncService.syncLocalToCloud()` đẩy danh mục, khoản chi và ảnh local lên tài khoản đang đăng nhập.
-- **Ảnh**: file local được nén, upload lên Storage, sau đó lưu `image_url` vào bảng `expenses`.
+- **Cloud-only**: mọi thao tác đọc/ghi khoản chi, danh mục, ngân sách đều đi thẳng Supabase;
+  không có fallback SQLite và không có đồng bộ thủ công.
+- **Lỗi mạng**: repository ném `StateError`, UI hiển thị thông báo và không lưu dữ liệu.
+- **Ảnh**: file tạm được upload lên Storage ngay khi lưu; sau đó `image_url` được ghi vào
+  bảng `expenses` và tệp tạm trên máy bị xóa. Hủy form cũng xóa tệp tạm.
 
 ## 3. Xác thực và điều hướng
 
@@ -101,8 +105,8 @@ main() → SupabaseConfig.initialize() → ChiTieuApp
                         chưa hoàn tất onboarding?
                               ├── có → OnboardingScreen
                               └── không ↓
-                 Supabase cấu hình & chưa đăng nhập & không offline?
-                              ├── có → LoginScreen (email / Google / offline)
+                      chưa đăng nhập?
+                              ├── có → LoginScreen (email / Google)
                               └── không → MainScreen
 ```
 
@@ -112,7 +116,7 @@ main() → SupabaseConfig.initialize() → ChiTieuApp
 - Trước khi mở trình duyệt, `AuthRepository.isGoogleProviderEnabled()` gọi
   `GET /auth/v1/settings`; nếu `external.google = false`, app hiện thông báo ngay
   thay vì để người dùng gặp trang JSON `Unsupported provider`.
-- Chế độ khách (`offlineMode = true`) bỏ qua màn đăng nhập và dùng SQLite.
+- Không có chế độ khách hay ngoại tuyến; khi đăng xuất, các provider dữ liệu được invalidate.
 
 ## 4. Điều hướng giao diện
 
@@ -125,26 +129,32 @@ MainScreen (Scaffold + Drawer)
 ├── AppSection.statistics  → StatisticsScreen
 └── AppSection.budget      → BudgetScreen
 
-Drawer → push ManageCategoriesScreen / TrashScreen / SettingsScreen / LoginScreen
+Drawer → push ManageCategoriesScreen / TrashScreen / SettingsScreen
 ```
 
 ### Locket feed
 
 - `PageView.builder` theo chiều dọc.
-- Trang 0: camera trực tiếp + nút thư viện / chụp / đổi camera / nhập nhanh.
+- Trang 0: camera trực tiếp + nút thư viện / chụp / đổi camera.
 - Trang 1..n: các khoản chi có ảnh, mới nhất trước (`buildFeedPhotos`).
 - Sau khi lưu khoản chi mới, feed tự cuộn tới ảnh vừa tạo.
-- Ảnh cloud dùng `CachedNetworkImage`; ảnh local dùng `Image.file`, có placeholder lỗi.
+- Nút lưới ở góc phải mở `FeedGridScreen`; chạm ảnh để nhảy tới đúng trang trong feed.
+- Ảnh cloud dùng `CachedNetworkImage`; hiển thị lỗi thân thiện nếu ảnh không tải được.
+- Xóa khoảnh khắc hiện snackbar hoàn tác 5 giây; snackbar cũ được ẩn trước khi hiện cái mới.
+- Trang ảnh không còn nhãn/badge "Đã đồng bộ"; trạng thái lưu cloud chỉ hiển thị ở drawer/tổng quan.
+- Chuyển camera trước/sau giải phóng `CameraController` cũ trước khi khởi tạo camera mới,
+  có rollback nếu camera mới không mở được.
 
 ## 5. Bảng dữ liệu
 
 ### SQLite
 
+Chỉ dùng cho tùy chọn cục bộ, không chứa dữ liệu tài chính:
+
 | Bảng | Nội dung |
 | --- | --- |
-| `categories` | Tên, icon, `is_default`, thời điểm tạo |
-| `expenses` | Ảnh, mô tả, số tiền, danh mục, ưu tiên, `created_at`, `deleted_at` |
-| `budgets` | Tháng (`yyyy-MM`), danh mục tùy chọn, hạn mức |
+| `priority_levels` | Danh sách mức độ cần thiết (seed mặc định) |
+| `app_settings` | Trạng thái onboarding |
 
 ### Supabase PostgreSQL
 
@@ -153,25 +163,33 @@ Drawer → push ManageCategoriesScreen / TrashScreen / SettingsScreen / LoginScr
 | `profiles` | Hồ sơ người dùng, tạo tự động bằng trigger |
 | `categories` | Danh mục theo `user_id` |
 | `expenses` | Khoản chi theo `user_id`, ảnh là `image_url` |
-| `budgets` | Ngân sách theo `user_id` và tháng |
+| `budgets` | Ngân sách theo `user_id` và tháng; mỗi tháng chỉ một dòng tổng (`category_id IS NULL`) nhờ unique index `uniq_budgets_total_per_month` |
+| `budget_alerts` | Đánh dấu đã gửi cảnh báo 80/90/100% theo tháng |
 | `expense-receipts` | Storage bucket chứa ảnh hóa đơn |
+
+> Bản cũ dùng `upsert` cho ngân sách tổng nên có thể sinh nhiều dòng trùng.
+> Repository hiện chọn dòng mới nhất, dọn dòng trùng khi lưu và xóa toàn bộ khi đặt ngân sách về 0.
+> Với database đã tạo trước bản này, chạy lại phần `budgets` trong `supabase_setup.sql`
+> để dọn dữ liệu cũ và tạo unique index.
 
 ## 6. Kiểm thử
 
 ```bash
 flutter analyze          # No issues found (0 warning/info)
-flutter test             # 69/69 passed
+flutter test             # 66/66 passed
 flutter build apk --release
+flutter build apk --debug
 ```
 
 - Unit: model, formatter, state, icon, feed ordering.
 - Widget: Login/Settings/Trash, ExpenseCard, PriorityBadge, CategoryChip, AppDrawer.
 - Đã xác minh trên emulator `codex_api35` (Android API 35):
-  onboarding → login → email sai trả lỗi từ Supabase → offline mode → Locket feed → drawer.
-- Đã xác minh bản **release APK** cài trên emulator: offline mode được ghi nhớ qua lần khởi động lại,
-  feed vuốt dọc + trang ảnh, drawer chuyển 4 khu vực, status bar đổi màu icon theo theme,
+  onboarding → login → email sai trả lỗi từ Supabase → feed Locket → drawer.
+- Đã xác minh bản **release APK** cài trên emulator: feed vuốt dọc + trang ảnh,
+  drawer chuyển 4 khu vực, status bar đổi màu icon theo theme,
   Google preflight báo lỗi rõ ràng và email sai nhận lỗi trực tiếp từ Supabase
   (xác nhận APK kết nối backend bình thường).
+- Bản **debug APK** mới nhất build thành công sau khi sửa camera, ngân sách và thùng rác.
 
 ## 7. Lưu ý khi nâng cấp
 
@@ -179,4 +197,7 @@ flutter build apk --release
 2. Không commit `.env`; chỉ commit `.env.example`.
 3. Nếu thêm provider OAuth mới, cập nhật preflight trong `auth_repository.dart` và tài liệu troubleshooting.
 4. Nếu đổi cấu trúc bảng, cập nhật cả `database_helper.dart`, `supabase_setup.sql` và model `toMap/fromMap`.
-5. `flutter_local_notifications` đã khai báo nhưng chưa nối vào luồng cảnh báo ngân sách.
+5. Cảnh báo ngân sách đã nối với `NotificationService` ở các mốc 80/90/100% và được đánh dấu
+   trong bảng `budget_alerts`; kiểm tra quyền thông báo nếu không nhận được.
+6. Database tạo trước v2.2 cần chạy phần dọn dữ liệu + unique index của `budgets` trong
+   `supabase_setup.sql` để tránh nhiều dòng ngân sách tổng.

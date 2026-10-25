@@ -12,6 +12,7 @@ import '../../providers/expense_provider.dart';
 import '../../providers/priority_provider.dart';
 import '../../widgets/hamburger_button.dart';
 import 'expense_form_sheet.dart';
+import 'feed_grid_screen.dart';
 import 'feed_helpers.dart';
 import 'feed_photo_page.dart';
 
@@ -33,6 +34,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   String? _cameraError;
   int _selectedCameraIndex = 0;
   bool _isCapturing = false;
+  bool _isSwitchingCamera = false;
 
   final PageController _pageController = PageController();
   final ImagePicker _picker = ImagePicker();
@@ -67,32 +69,47 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     await _setupCameraController(_cameras[_selectedCameraIndex]);
   }
 
-  Future<void> _setupCameraController(CameraDescription camera) async {
+  Future<bool> _setupCameraController(CameraDescription camera) async {
     final previous = _controller;
-    _controller = CameraController(
+    _controller = null;
+
+    // Phải giải phóng camera cũ trước khi mở camera mới, nếu không thiết bị
+    // sẽ giữ cả hai và camera mới bị đen.
+    if (previous != null) {
+      try {
+        await previous.dispose();
+      } catch (_) {}
+    }
+
+    final controller = CameraController(
       camera,
       ResolutionPreset.high,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
+    _controller = controller;
 
     try {
-      await _controller!.initialize();
+      await controller.initialize();
       if (!mounted) {
-        await _controller?.dispose();
-        return;
+        _controller = null;
+        await controller.dispose();
+        return false;
       }
-      if (previous != null) await previous.dispose();
       setState(() {
         _isCameraInitialized = true;
         _isCameraInitializing = false;
+        _hasCameraPermission = true;
         _cameraError = null;
       });
+      return true;
     } on CameraException catch (error) {
       debugPrint('Camera Exception: ${error.code}, ${error.description}');
-      await _controller?.dispose();
-      _controller = null;
-      if (!mounted) return;
+      try {
+        await controller.dispose();
+      } catch (_) {}
+      if (identical(_controller, controller)) _controller = null;
+      if (!mounted) return false;
       setState(() {
         _isCameraInitialized = false;
         _isCameraInitializing = false;
@@ -101,6 +118,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
             ? 'Camera đang bận hoặc không khả dụng.'
             : 'Bạn chưa cấp quyền truy cập máy ảnh.';
       });
+      return false;
     }
   }
 
@@ -169,13 +187,34 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   }
 
   Future<void> _switchCamera() async {
-    if (_cameras.length < 2 || _isCapturing) return;
-    _selectedCameraIndex = (_selectedCameraIndex + 1) % _cameras.length;
+    if (_cameras.length < 2 || _isCapturing || _isSwitchingCamera) return;
+    setState(() => _isSwitchingCamera = true);
+
+    final previousIndex = _selectedCameraIndex;
+    final currentLensDirection = _cameras[previousIndex].lensDirection;
+    var nextIndex = _cameras.indexWhere(
+      (camera) => camera.lensDirection != currentLensDirection,
+    );
+    if (nextIndex < 0) nextIndex = (previousIndex + 1) % _cameras.length;
+
     setState(() {
+      _selectedCameraIndex = nextIndex;
       _isCameraInitialized = false;
       _isCameraInitializing = true;
+      _cameraError = null;
     });
-    await _setupCameraController(_cameras[_selectedCameraIndex]);
+
+    final success = await _setupCameraController(_cameras[nextIndex]);
+    if (!success && mounted && previousIndex != nextIndex) {
+      // Nếu camera mới không mở được, quay lại camera cũ để không bị màn hình đen.
+      setState(() {
+        _selectedCameraIndex = previousIndex;
+        _isCameraInitializing = true;
+        _cameraError = null;
+      });
+      await _setupCameraController(_cameras[previousIndex]);
+    }
+    if (mounted) setState(() => _isSwitchingCamera = false);
   }
 
   Future<void> _moveToTrash(Expense expense) async {
@@ -191,10 +230,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       _pageController.jumpToPage(lastPage);
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         content: const Text('Đã chuyển khoảnh khắc vào thùng rác.'),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
         action: SnackBarAction(
           label: 'Hoàn tác',
           onPressed: () =>
@@ -210,13 +252,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  void _toggleFeed() {
-    if (!_pageController.hasClients) return;
+  Future<void> _openPhotoGrid() async {
     final photos = buildFeedPhotos(ref.read(expenseProvider).expenses);
     if (photos.isEmpty) return;
-    final target = _pageIndex == 0 ? 1 : 0;
-    _pageController.animateToPage(
-      target,
+
+    final selectedIndex = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => FeedGridScreen(photos: photos),
+      ),
+    );
+    if (!mounted || selectedIndex == null || !_pageController.hasClients) {
+      return;
+    }
+
+    await _pageController.animateToPage(
+      selectedIndex + 1,
       duration: const Duration(milliseconds: 380),
       curve: Curves.easeOutCubic,
     );
@@ -344,10 +395,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                     label: isCameraPage
                         ? '${photos.length} ảnh'
                         : '$_pageIndex/${photos.length}',
-                    icon: isCameraPage
-                        ? Icons.photo_library_rounded
-                        : Icons.swap_vert_rounded,
-                    onTap: _toggleFeed,
+                    icon: Icons.grid_view_rounded,
+                    onTap: _openPhotoGrid,
                   )
                 else
                   const SizedBox(width: 44),

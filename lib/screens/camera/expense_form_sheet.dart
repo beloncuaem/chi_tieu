@@ -1,11 +1,10 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
+import '../../core/utils/icon_helper.dart';
 import '../../data/models/expense.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/expense_provider.dart';
@@ -29,9 +28,10 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
   int? _selectedCategoryId;
   late int _selectedPriority;
   bool _isSaving = false;
+  bool _didSave = false;
 
   bool get _isEditing => widget.expense != null;
-  String get _sourceImagePath => widget.expense?.imagePath ?? widget.imagePath!;
+  String? get _sourceImagePath => widget.expense?.imagePath ?? widget.imagePath;
 
   @override
   void initState() {
@@ -43,25 +43,6 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
     );
     _selectedCategoryId = expense?.categoryId;
     _selectedPriority = expense?.priority ?? 2;
-  }
-
-  Future<String> _saveImageToLocalDirectory(String sourcePath) async {
-    final source = File(sourcePath);
-    if (!await source.exists()) {
-      throw StateError('Không tìm thấy ảnh đã chọn');
-    }
-    final appDir = await getApplicationDocumentsDirectory();
-    final receiptsDir = Directory(path.join(appDir.path, 'receipts'));
-    await receiptsDir.create(recursive: true);
-    final extension = path.extension(sourcePath).isEmpty
-        ? '.jpg'
-        : path.extension(sourcePath);
-    final savedImagePath = path.join(
-      receiptsDir.path,
-      '${const Uuid().v4()}$extension',
-    );
-    await source.copy(savedImagePath);
-    return savedImagePath;
   }
 
   Future<void> _saveExpense() async {
@@ -103,35 +84,43 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
         );
         await ref.read(expenseProvider.notifier).updateExpense(updated);
       } else {
-        final storedImagePath = await _saveImageToLocalDirectory(
-          _sourceImagePath,
-        );
+        final sourceImagePath = _sourceImagePath;
+        if (sourceImagePath == null) {
+          throw StateError('Không tìm thấy ảnh đã chọn.');
+        }
         final newExpense = Expense(
           caption: _captionController.text.trim(),
           amount: amount,
           categoryId: categoryId,
           priority: _selectedPriority,
-          imagePath: storedImagePath,
+          imagePath: sourceImagePath,
           createdAt: DateTime.now(),
         );
         await ref.read(expenseProvider.notifier).addExpense(newExpense);
+        _didSave = true;
+
+        // Ảnh đã nằm trên Cloud, xóa bản tạm trên máy.
+        final localFile = File(sourceImagePath);
+        if (await localFile.exists()) {
+          try {
+            await localFile.delete();
+          } catch (_) {}
+        }
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing ? 'Đã cập nhật khoản chi.' : 'Đã lưu khoản chi.',
-          ),
-        ),
-      );
+      if (_isEditing) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã cập nhật khoản chi.')));
+      }
       Navigator.of(context).pop();
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không thể lưu khoản chi. Vui lòng thử lại.'),
-        ),
-      );
+      final message = error is StateError
+          ? error.message
+          : 'Không thể lưu lên Cloud. Kiểm tra kết nối mạng và thử lại.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -139,6 +128,14 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
 
   @override
   void dispose() {
+    final draftPath = widget.imagePath;
+    if (!_didSave &&
+        !_isEditing &&
+        draftPath != null &&
+        !draftPath.startsWith('http')) {
+      final file = File(draftPath);
+      if (file.existsSync()) file.delete();
+    }
     _captionController.dispose();
     _amountController.dispose();
     super.dispose();
@@ -241,7 +238,11 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
                       children: categoryState.categories.map((category) {
                         final selected = _selectedCategoryId == category.id;
                         return ChoiceChip(
-                          label: Text('${category.icon} ${category.name}'),
+                          avatar: IconHelper.getIconWidget(
+                            category.icon,
+                            size: 16,
+                          ),
+                          label: Text(category.name),
                           selected: selected,
                           onSelected: (value) => setState(() {
                             _selectedCategoryId = value ? category.id : null;
@@ -303,23 +304,37 @@ class _ExpenseFormSheetState extends ConsumerState<ExpenseFormSheet> {
   }
 
   Widget _buildSquareImage() {
-    final file = File(_sourceImagePath);
+    final path = _sourceImagePath;
+    final placeholder = Container(
+      color: Colors.grey.shade200,
+      child: const Icon(Icons.broken_image_outlined, size: 56),
+    );
+
+    Widget image;
+    if (path == null || path.isEmpty) {
+      image = placeholder;
+    } else if (path.startsWith('http://') || path.startsWith('https://')) {
+      image = CachedNetworkImage(
+        imageUrl: path,
+        fit: BoxFit.cover,
+        placeholder: (_, __) =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        errorWidget: (_, __, ___) => placeholder,
+      );
+    } else {
+      image = Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+
     return Semantics(
       label: 'Ảnh của khoản chi',
       image: true,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: Image.file(
-            file,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey.shade200,
-              child: const Icon(Icons.broken_image_outlined, size: 56),
-            ),
-          ),
-        ),
+        child: AspectRatio(aspectRatio: 1, child: image),
       ),
     );
   }

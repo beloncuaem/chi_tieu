@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/category.dart';
+import '../core/utils/icon_helper.dart';
+import '../data/models/category.dart';
 
 class CategoryChip extends StatelessWidget {
   final Category category;
@@ -17,7 +18,7 @@ class CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: Text(category.icon),
+      avatar: IconHelper.getIconWidget(category.icon, size: 16),
       label: Text(category.name),
       backgroundColor: isSelected
           ? Theme.of(context).colorScheme.primaryContainer

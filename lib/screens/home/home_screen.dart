@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../core/utils/icon_helper.dart';
 import '../../data/models/category.dart';
 import '../../data/models/expense.dart';
 import '../../data/models/priority_level.dart';
@@ -98,20 +99,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showImageDialog(String imagePath) {
-    showDialog(
+    showGeneralDialog<void>(
       context: context,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: imagePath.startsWith('http')
-                ? CachedNetworkImage(imageUrl: imagePath, fit: BoxFit.contain)
-                : Image.file(File(imagePath), fit: BoxFit.contain),
-          ),
-        ),
-      ),
+      barrierDismissible: true,
+      barrierLabel: 'Xem ảnh',
+      barrierColor: Colors.black.withValues(alpha: 0.94),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (_, __, ___) => _PhotoPreviewDialog(imagePath: imagePath),
     );
   }
 
@@ -167,44 +161,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Xin chào, $displayName',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Xin chào, $displayName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: authState.user != null
-                            ? AppColors.primary
-                            : Colors.grey,
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: authState.user != null
+                              ? AppColors.primary
+                              : Colors.grey,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      authState.user != null ? 'Cloud Sync' : 'Offline Mode',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
+                      const SizedBox(width: 5),
+                      Text(
+                        authState.user != null
+                            ? 'Cloud Sync'
+                            : 'Đang kết nối...',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -397,9 +397,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (expense.id == null) return;
               await ref.read(expenseProvider.notifier).moveToTrash(expense.id!);
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              final messenger = ScaffoldMessenger.of(context);
+              messenger.hideCurrentSnackBar();
+              messenger.showSnackBar(
                 SnackBar(
                   content: const Text('Đã chuyển khoản chi vào thùng rác.'),
+                  duration: const Duration(seconds: 5),
                   action: SnackBarAction(
                     label: 'Hoàn tác',
                     onPressed: () => ref
@@ -414,6 +417,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
     return result;
+  }
+}
+
+class _PhotoPreviewDialog extends StatelessWidget {
+  final String imagePath;
+
+  const _PhotoPreviewDialog({required this.imagePath});
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 5,
+                child: Center(child: _buildImage()),
+              ),
+            ),
+          ),
+          Positioned(
+            top: topPadding + 12,
+            right: 16,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.55),
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return CachedNetworkImage(
+        imageUrl: imagePath,
+        fit: BoxFit.contain,
+        width: double.infinity,
+        placeholder: (_, __) => const Center(
+          child: CircularProgressIndicator(color: Colors.white54),
+        ),
+        errorWidget: (_, __, ___) => const Icon(
+          Icons.broken_image_rounded,
+          color: Colors.white38,
+          size: 64,
+        ),
+      );
+    }
+
+    final file = File(imagePath);
+    if (!file.existsSync()) {
+      return const Icon(
+        Icons.broken_image_rounded,
+        color: Colors.white38,
+        size: 64,
+      );
+    }
+    return Image.file(file, fit: BoxFit.contain, width: double.infinity);
   }
 }
 
@@ -583,6 +657,7 @@ class _BudgetProgressCard extends StatelessWidget {
     if (total <= 0) return const SizedBox.shrink();
     final progress = budgetState.budgetUsagePercent.clamp(0, 1).toDouble();
     final isOver = budgetState.budgetUsagePercent >= 1;
+    final overAmount = budgetState.totalSpent - total;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GlassCard(
@@ -659,6 +734,17 @@ class _BudgetProgressCard extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Text(
+            overAmount > 0
+                ? 'Quá ngân sách: ${CurrencyFormatter.format(overAmount)}'
+                : 'Còn lại: ${CurrencyFormatter.format(-overAmount)}',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.bold,
+              color: overAmount > 0 ? AppColors.priority3 : AppColors.primary,
+            ),
+          ),
         ],
       ),
     );
@@ -728,6 +814,8 @@ class _ExpenseTile extends StatelessWidget {
           ),
           title: Text(
             expense.caption.isEmpty ? 'Không có ghi chú' : expense.caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
           subtitle: Padding(
@@ -741,7 +829,11 @@ class _ExpenseTile extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: EdgeInsets.zero,
-                  avatar: Text(category?.icon ?? '🏷️'),
+                  avatar: IconHelper.getIconWidget(
+                    category?.icon ?? 'dotsThreeOutline',
+                    size: 15,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   label: Text(
                     category?.name ?? 'Khác',
                     style: const TextStyle(fontSize: 12),
@@ -952,7 +1044,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                     ),
                     ...widget.categories.map(
                       (category) => ChoiceChip(
-                        label: Text('${category.icon} ${category.name}'),
+                        avatar: IconHelper.getIconWidget(
+                          category.icon,
+                          size: 15,
+                        ),
+                        label: Text(category.name),
                         selected: _categoryId == category.id,
                         onSelected: (selected) => setState(
                           () => _categoryId = selected ? category.id : null,

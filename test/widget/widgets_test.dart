@@ -91,7 +91,7 @@ void main() {
         ),
       );
 
-      expect(find.text('🍜'), findsOneWidget);
+      expect(find.byIcon(Icons.restaurant_rounded), findsOneWidget);
       expect(find.text('Ăn uống'), findsOneWidget);
 
       await tester.tap(find.byType(CategoryChip));
@@ -120,7 +120,8 @@ void main() {
       );
 
       expect(find.text('Phở bò Hà Nội'), findsOneWidget);
-      expect(find.text('🍜 Ăn uống'), findsOneWidget);
+      expect(find.text('Ăn uống'), findsOneWidget);
+      expect(find.byIcon(Icons.restaurant_rounded), findsNWidgets(2));
       expect(find.text('Thiết yếu'), findsOneWidget);
       expect(find.text('45.000\u00a0đ'), findsOneWidget);
       expect(find.text('07:30'), findsOneWidget);

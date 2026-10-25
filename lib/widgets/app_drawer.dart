@@ -9,12 +9,10 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback onOpenCategories;
   final VoidCallback onOpenTrash;
   final VoidCallback onOpenSettings;
-  final VoidCallback? onLogin;
-  final Future<void> Function()? onLogout;
+  final Future<void> Function() onLogout;
   final VoidCallback onToggleTheme;
   final String displayName;
   final String? email;
-  final bool isCloudUser;
   final bool isDarkMode;
 
   const AppDrawer({
@@ -26,11 +24,9 @@ class AppDrawer extends StatelessWidget {
     required this.onOpenSettings,
     required this.onToggleTheme,
     required this.displayName,
-    required this.isCloudUser,
+    required this.onLogout,
     required this.isDarkMode,
     this.email,
-    this.onLogin,
-    this.onLogout,
   });
 
   void _closeThen(BuildContext context, VoidCallback action) {
@@ -119,13 +115,7 @@ class AppDrawer extends StatelessWidget {
                 child: _ProfileCard(
                   displayName: displayName,
                   email: email,
-                  isCloudUser: isCloudUser,
-                  onLogin: onLogin == null
-                      ? null
-                      : () => _closeThen(context, onLogin!),
-                  onLogout: onLogout == null
-                      ? null
-                      : () => _closeThen(context, () => onLogout!()),
+                  onLogout: () => _closeThen(context, () => onLogout()),
                 ),
               ),
               const SizedBox(height: 20),
@@ -196,16 +186,12 @@ class AppDrawer extends StatelessWidget {
 class _ProfileCard extends StatelessWidget {
   final String displayName;
   final String? email;
-  final bool isCloudUser;
-  final VoidCallback? onLogin;
-  final VoidCallback? onLogout;
+  final VoidCallback onLogout;
 
   const _ProfileCard({
     required this.displayName,
-    required this.isCloudUser,
+    required this.onLogout,
     this.email,
-    this.onLogin,
-    this.onLogout,
   });
 
   @override
@@ -261,9 +247,7 @@ class _ProfileCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  isCloudUser
-                      ? (email ?? 'Đã đồng bộ đám mây')
-                      : 'Chế độ ngoại tuyến',
+                  email ?? 'Tài khoản đám mây',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -277,20 +261,16 @@ class _ProfileCard extends StatelessWidget {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isCloudUser
-                            ? AppColors.primaryLight
-                            : AppColors.accentAmber,
+                        color: AppColors.primaryLight,
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      isCloudUser ? 'Cloud Sync' : 'Local',
+                    const Text(
+                      'Cloud Sync',
                       style: TextStyle(
-                        color: isCloudUser
-                            ? AppColors.primaryLight
-                            : AppColors.accentAmber,
+                        color: AppColors.primaryLight,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
@@ -300,30 +280,15 @@ class _ProfileCard extends StatelessWidget {
               ],
             ),
           ),
-          if (isCloudUser)
-            IconButton(
-              tooltip: 'Đăng xuất',
-              onPressed: onLogout,
-              icon: const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFFF8A9B),
-                size: 20,
-              ),
-            )
-          else
-            TextButton(
-              onPressed: onLogin,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primaryLight,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: const Size(0, 32),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Đăng nhập',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-              ),
+          IconButton(
+            tooltip: 'Đăng xuất',
+            onPressed: onLogout,
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Color(0xFFFF8A9B),
+              size: 20,
             ),
+          ),
         ],
       ),
     );

@@ -37,14 +37,22 @@ class FeedPhotoPage extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         _buildImage(imagePath),
-        const Positioned.fill(
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 170,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(gradient: AppColors.feedTopGradient),
             ),
           ),
         ),
-        const Positioned.fill(
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 340,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(gradient: AppColors.feedBottomGradient),
@@ -155,24 +163,6 @@ class FeedPhotoPage extends StatelessWidget {
                     label: 'Xóa',
                     onTap: onDelete,
                     danger: true,
-                  ),
-                  const Spacer(),
-                  Text(
-                    expense.imagePath!.startsWith('http')
-                        ? 'Đã đồng bộ'
-                        : 'Lưu trên máy',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10.5,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    expense.imagePath!.startsWith('http')
-                        ? Icons.cloud_done_rounded
-                        : Icons.phone_iphone_rounded,
-                    size: 14,
-                    color: Colors.white54,
                   ),
                 ],
               ),

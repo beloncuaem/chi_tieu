@@ -20,12 +20,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _OnboardingPage(
       icon: Icons.attach_money_rounded,
       title: 'Chào mừng đến với Chi Tiêu',
-      description: 'Ghi lại khoản chi bằng ảnh và theo dõi ngân sách ngay trên điện thoại của bạn.',
+      description: 'Ghi lại khoản chi bằng ảnh và theo dõi ngân sách của bạn mọi lúc, mọi nơi.',
     ),
     _OnboardingPage(
-      icon: Icons.photo_camera_back_outlined,
-      title: 'Ảnh là chứng từ của bạn',
-      description: 'Mỗi khoản chi cần một ảnh từ camera hoặc thư viện. Ảnh chỉ được lưu trên thiết bị.',
+      icon: Icons.cloud_done_outlined,
+      title: 'Đồng bộ an toàn trên Cloud',
+      description: 'Mỗi khoản chi cần một ảnh từ camera hoặc thư viện. Ảnh và dữ liệu được lưu ngay trên Cloud, không chiếm bộ nhớ máy.',
     ),
     _OnboardingPage(
       icon: Icons.notifications_active_outlined,

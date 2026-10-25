@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../data/models/expense.dart';
-import '../../data/models/category.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/utils/currency_formatter.dart';
+import '../core/constants/app_colors.dart';
+import '../core/utils/currency_formatter.dart';
+import '../core/utils/icon_helper.dart';
+import '../data/models/category.dart';
+import '../data/models/expense.dart';
 import 'category_icon_badge.dart';
 import 'priority_badge.dart';
 
@@ -68,13 +69,25 @@ class ExpenseCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Text(
-                          '${category.icon} ${category.name}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
+                        IconHelper.getIconWidget(
+                          category.icon,
+                          size: 14,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            category.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),

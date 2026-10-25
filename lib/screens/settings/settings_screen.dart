@@ -2,46 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../../data/repositories/data_sync_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../auth/login_screen.dart';
 import '../categories/manage_categories_screen.dart';
 import '../trash/trash_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-
-  Future<void> _handleSync(BuildContext context) async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đang đồng bộ dữ liệu lên Cloud...'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-      final count = await DataSyncService().syncLocalToCloud();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Đã đồng bộ thành công $count khoản chi lên Supabase!',
-            ),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi đồng bộ: $e'),
-            backgroundColor: AppColors.priority3,
-          ),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -97,9 +64,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        authState.user != null
-                            ? authState.user!.email ?? 'Tài khoản đám mây'
-                            : 'Chế độ Cục bộ (Offline)',
+                        authState.user?.email ?? 'Tài khoản đám mây',
                         style: const TextStyle(
                           fontSize: 13,
                           color: Color(0xFF94A3B8),
@@ -114,60 +79,34 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Cloud Account Section
-          if (authState.user != null) ...[
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.cloud_upload_outlined,
-                      color: AppColors.primary,
-                    ),
-                    title: const Text('Đồng bộ dữ liệu cục bộ lên Cloud'),
-                    subtitle: const Text(
-                      'Đẩy các khoản chi từ máy lên Supabase',
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_rounded),
-                    onTap: () => _handleSync(context),
+          Card(
+            child: Column(
+              children: [
+                const ListTile(
+                  leading: Icon(Icons.cloud_done_outlined, color: AppColors.primary),
+                  title: Text('Dữ liệu trên Cloud'),
+                  subtitle: Text(
+                    'Mọi khoản chi, danh mục và ngân sách được lưu trực tiếp trên Supabase.',
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.priority3,
-                    ),
-                    title: const Text(
-                      'Đăng xuất',
-                      style: TextStyle(color: AppColors.priority3),
-                    ),
-                    onTap: () async {
-                      await ref.read(authProvider.notifier).signOut();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-          ] else ...[
-            Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.account_circle_outlined,
-                  color: AppColors.primary,
                 ),
-                title: const Text('Đăng nhập Supabase'),
-                subtitle: const Text('Kích hoạt đồng bộ hóa trên mọi thiết bị'),
-                trailing: const Icon(Icons.arrow_forward_rounded),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
-              ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: AppColors.priority3,
+                  ),
+                  title: const Text(
+                    'Đăng xuất',
+                    style: TextStyle(color: AppColors.priority3),
+                  ),
+                  onTap: () async {
+                    await ref.read(authProvider.notifier).signOut();
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-          ],
+          ),
+          const SizedBox(height: 14),
 
           // Preferences & Features
           Card(

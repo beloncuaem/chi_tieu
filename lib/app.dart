@@ -6,6 +6,7 @@ import 'core/constants/app_strings.dart';
 import 'providers/budget_provider.dart';
 import 'providers/category_provider.dart';
 import 'providers/expense_provider.dart';
+import 'providers/statistics_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/app_settings_provider.dart';
 import 'providers/auth_provider.dart';
@@ -13,12 +14,8 @@ import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 
-bool shouldShowLoginScreen({
-  required bool isConfigured,
-  required AuthStatus status,
-  required bool offlineMode,
-}) {
-  return isConfigured && status != AuthStatus.authenticated && !offlineMode;
+bool shouldShowLoginScreen({required AuthStatus status}) {
+  return status != AuthStatus.authenticated;
 }
 
 class ChiTieuApp extends ConsumerWidget {
@@ -48,13 +45,20 @@ class _AppHome extends ConsumerWidget {
     final authState = ref.watch(authProvider);
 
     ref.listen<AppAuthState>(authProvider, (previous, next) {
-      if (previous?.status != AuthStatus.authenticated &&
-          next.status == AuthStatus.authenticated) {
+      final wasAuthenticated = previous?.status == AuthStatus.authenticated;
+      final isAuthenticated = next.status == AuthStatus.authenticated;
+
+      if (!wasAuthenticated && isAuthenticated) {
         ref.read(expenseProvider.notifier).refreshDashboard();
         ref.read(categoryProvider.notifier).loadCategories();
         ref
             .read(budgetProvider.notifier)
             .refreshCurrentMonthAfterExpenseChange();
+      } else if (wasAuthenticated && !isAuthenticated) {
+        ref.invalidate(expenseProvider);
+        ref.invalidate(categoryProvider);
+        ref.invalidate(budgetProvider);
+        ref.invalidate(statisticsProvider);
       }
     });
 
@@ -66,11 +70,7 @@ class _AppHome extends ConsumerWidget {
       return const OnboardingScreen();
     }
 
-    if (shouldShowLoginScreen(
-      isConfigured: authState.isConfigured,
-      status: authState.status,
-      offlineMode: settings.offlineMode,
-    )) {
+    if (shouldShowLoginScreen(status: authState.status)) {
       return const LoginScreen();
     }
 

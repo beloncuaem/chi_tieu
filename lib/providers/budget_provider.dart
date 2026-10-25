@@ -159,17 +159,21 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
   Future<void> _sendNewAlerts() async {
     final usagePercent = state.budgetUsagePercent;
     if (state.totalBudgetAmount <= 0) return;
-    for (final threshold in [80, 90, 100]) {
-      if (usagePercent * 100 < threshold ||
-          await _alertRepository.hasSent(state.month, threshold)) {
-        continue;
+    try {
+      for (final threshold in [80, 90, 100]) {
+        if (usagePercent * 100 < threshold ||
+            await _alertRepository.hasSent(state.month, threshold)) {
+          continue;
+        }
+        await NotificationService.instance.showBudgetAlert(
+          threshold: threshold,
+          monthLabel: DateFormat('MM/yyyy')
+              .format(DateTime.parse('${state.month}-01')),
+        );
+        await _alertRepository.markSent(state.month, threshold);
       }
-      await NotificationService.instance.showBudgetAlert(
-        threshold: threshold,
-        monthLabel: DateFormat('MM/yyyy')
-            .format(DateTime.parse('${state.month}-01')),
-      );
-      await _alertRepository.markSent(state.month, threshold);
+    } catch (_) {
+      // Cảnh báo ngân sách không được chặn việc tải ngân sách.
     }
   }
 
@@ -183,9 +187,8 @@ class BudgetNotifier extends StateNotifier<BudgetState> {
         'Ngân sách tổng không thể thấp hơn phần đã phân bổ. Hãy điều chỉnh các danh mục trước.',
       );
     }
-    final existing = await _repository.getBudgetForMonth(month);
     if (amount <= 0) {
-      if (existing != null) await _repository.deleteBudget(existing.id!);
+      await _repository.clearTotalBudget(month);
     } else {
       await _repository.setBudget(Budget(month: month, amount: amount));
     }

@@ -1,23 +1,33 @@
-import '../database/database_helper.dart';
+import '../../core/config/supabase_config.dart';
 
 class BudgetAlertRepository {
   Future<bool> hasSent(String month, int threshold) async {
-    final db = await DatabaseHelper.instance.database;
-    final rows = await db.query(
-      'budget_alerts',
-      where: 'month = ? AND threshold = ?',
-      whereArgs: [month, threshold],
-      limit: 1,
-    );
-    return rows.isNotEmpty;
+    final client = SupabaseConfig.client;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) {
+      throw StateError('Vui lòng đăng nhập để tiếp tục.');
+    }
+
+    final data = await client
+        .from('budget_alerts')
+        .select('id')
+        .eq('month', month)
+        .eq('threshold', threshold)
+        .limit(1);
+    return (data as List).isNotEmpty;
   }
 
   Future<void> markSent(String month, int threshold) async {
-    final db = await DatabaseHelper.instance.database;
-    await db.insert('budget_alerts', {
+    final client = SupabaseConfig.client;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) {
+      throw StateError('Vui lòng đăng nhập để tiếp tục.');
+    }
+
+    await client.from('budget_alerts').upsert({
+      'user_id': user.id,
       'month': month,
       'threshold': threshold,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    }, onConflict: 'user_id,month,threshold');
   }
 }

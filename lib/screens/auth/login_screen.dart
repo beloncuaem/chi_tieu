@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/supabase_config.dart';
 import '../../core/constants/app_colors.dart';
-import '../../providers/app_settings_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
 
@@ -34,8 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .signInWithEmail(_emailController.text, _passwordController.text);
     if (!mounted) return;
     if (success) {
-      await ref.read(appSettingsProvider.notifier).exitOffline();
-      if (mounted && Navigator.of(context).canPop()) {
+      if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
       return;
@@ -75,13 +73,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    }
-  }
-
-  Future<void> _continueOffline() async {
-    await ref.read(appSettingsProvider.notifier).continueOffline();
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
     }
   }
 
@@ -358,17 +349,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: _continueOffline,
-                    icon: const Icon(Icons.cloud_off_rounded, size: 18),
-                    label: const Text('Dùng ngoại tuyến (không đồng bộ)'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
                   ),
                 ],
               ),

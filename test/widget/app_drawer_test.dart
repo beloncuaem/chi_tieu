@@ -10,9 +10,7 @@ AppDrawer _drawer({
   VoidCallback? onOpenTrash,
   VoidCallback? onOpenSettings,
   VoidCallback? onToggleTheme,
-  VoidCallback? onLogin,
   Future<void> Function()? onLogout,
-  bool isCloudUser = false,
 }) {
   return AppDrawer(
     selected: selected,
@@ -21,12 +19,10 @@ AppDrawer _drawer({
     onOpenTrash: onOpenTrash ?? () {},
     onOpenSettings: onOpenSettings ?? () {},
     onToggleTheme: onToggleTheme ?? () {},
-    displayName: isCloudUser ? 'Quang' : 'Khách',
-    email: isCloudUser ? 'quang@example.com' : null,
-    isCloudUser: isCloudUser,
+    displayName: 'Quang',
+    email: 'quang@example.com',
     isDarkMode: true,
-    onLogin: onLogin,
-    onLogout: onLogout,
+    onLogout: onLogout ?? () async {},
   );
 }
 
@@ -57,7 +53,6 @@ void main() {
       expect(find.text('Quản lý danh mục'), findsOneWidget);
       expect(find.text('Thùng rác'), findsOneWidget);
       expect(find.text('Cài đặt'), findsOneWidget);
-      expect(find.text('Chế độ ngoại tuyến'), findsOneWidget);
     });
 
     testWidgets('Chọn mục gọi callback và đóng drawer', (tester) async {
@@ -116,10 +111,7 @@ void main() {
 
     testWidgets('Hiển thị hồ sơ cloud và nút đăng xuất', (tester) async {
       var loggedOut = false;
-      await _openDrawer(
-        tester,
-        _drawer(isCloudUser: true, onLogout: () async => loggedOut = true),
-      );
+      await _openDrawer(tester, _drawer(onLogout: () async => loggedOut = true));
 
       expect(find.text('Quang'), findsOneWidget);
       expect(find.text('quang@example.com'), findsOneWidget);
@@ -128,15 +120,6 @@ void main() {
       await tester.tap(find.byTooltip('Đăng xuất'));
       await tester.pumpAndSettle();
       expect(loggedOut, isTrue);
-    });
-
-    testWidgets('Khách có nút đăng nhập', (tester) async {
-      var tappedLogin = false;
-      await _openDrawer(tester, _drawer(onLogin: () => tappedLogin = true));
-
-      await tester.tap(find.text('Đăng nhập'));
-      await tester.pumpAndSettle();
-      expect(tappedLogin, isTrue);
     });
   });
 }
